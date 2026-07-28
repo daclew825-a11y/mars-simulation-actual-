@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarsNet-RL | Autonomous Orbital Routing</title>
+    
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #0e1117;
+            color: #ffffff;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 320px;
+            background-color: #262730;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            border-right: 1px solid #363940;
+            flex-shrink: 0;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            color: #ff4b4b;
+            margin-bottom: 5px;
+        }
+
+        .info-box {
+            background-color: #1e1e24;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            color: #b0b0b0;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: #e0e0e0;
+        }
+
+        input[type="range"], input[type="number"], select {
+            width: 100%;
+            padding: 5px;
+            background-color: #0e1117;
+            border: 1px solid #4a4a4a;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .metric-card {
+            background-color: #262730;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #363940;
+        }
+
+        .metric-title {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .metric-sub {
+            font-size: 0.75rem;
+            color: #00ffcc;
+        }
+
+        /* Fixed styling to prevent Plotly canvas collapse */
+        #plotly-chart {
+            width: 100%;
+            height: 500px;
+            min-height: 500px;
+            background-color: #000000;
+            border-radius: 8px;
+            position: relative;
+            display: block;
+        }
+
+        .chaos-btn {
+            background-color: #ff4b4b;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .chaos-btn:hover {
+            background-color: #d43f3f;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #363940;
+            margin-top: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #a0a0a0;
+        }
+
+        .tab.active {
+            color: #ff4b4b;
+            border-bottom: 2px solid #ff4b4b;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            background-color: #262730;
+            padding: 15px;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .chat-box {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #363940;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background: #0e1117;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .chat-message {
+            padding: 8px 12px;
+            border-radius: 6px;
+            max-width: 80%;
+            font-size: 0.9rem;
+        }
+
+        .chat-message.user {
+            background-color: #104E8B;
+            align-self: flex-end;
+        }
+
+        .chat-message.assistant {
+            background-color: #363940;
+            align-self: flex-start;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-container input {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>🚀 MarsNet-RL Control</h2>
+
+        <div class="card">
+            <div class="metric-title">Cumulative RL Reward Points</div>
+            <div class="metric-value" id="rl-reward-score">0.0</div>
+        </div>
+
+        <div class="card" style="display: flex; justify-content: space-between;">
+            <div>
+                <div class="metric-title">Avoided Hazards</div>
+                <div class="metric-value" id="rl-avoidances">0</div>
+            </div>
+            <div>
+                <div class="metric-title">Collisions</div>
+                <div class="metric-value hazard" id="rl-collisions">0</div>
+            </div>
+        </div>
+        <div class="control-group">
+            <label for="sat-slider">Number of Satellites: <span id = "sat-count-val">20</span></label>
+            <input type="range" id="sat-slider" min="5" max="50" value="20">
+        </div>
+
+        <div class="info-box">Version 1.0 | Team Cassiopeia</div>
+
+        <div class="control-group">
+            <label>Debris Density</label>
+            <input type="range" min="0" max="1" step="0.1" value="0.3">
+        </div>
+
+        <div class="control-group">
+            <label><input type="checkbox" checked> Enable Training Mode (RL Active)</label>
+            <label><input type="checkbox" id="anim-toggle" checked> ▶️ Animate Satellite Orbits</label>
+        </div>
+
+        <hr style="border-color: #363940;">
+
+        <div class="control-group">
+            <label>Max Delta-V (m/s)</label>
+            <input type="number" value="1.0" step="0.1">
+        </div>
+
+        <div class="control-group">
+            <label>Target Orbit (km)</label>
+            <select id="orbit-select">
+                <option value="500">500</option>
+                <option value="1000" selected>1000</option>
+                <option value="2500">2500</option>
+                <option value="5000">5000</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <h1>🛰️ MarsNet-RL: Autonomous Orbital Routing</h1>
+        <p style="color: #a0a0a0; font-size: 0.9rem;">Objective: Maintain >90% network uptime while avoiding 99% of orbital collisions.</p>
+
+        <div class="metrics-row">
+            <div class="metric-card">
+                <div class="metric-title">Live Collision Risk</div>
+                <div class="metric-value" id="metric-collision-risk">0.02%</div>
+                <div class="metric-sub">-0.4% from baseline</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Network Coverage</div>
+                <div class="metric-value" id="metric-network-coverage">94.2%</div>
+                <div class="metric-sub">Target: 90%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">Agent Success Rate</div>
+                <div class="metric-value" id="metric-success-rate">88.5%</div>
+                <div class="metric-sub">Stage 2 Phase</div>
+            </div>
+        </div>
+
+        <h3>3D Martian Orbital Visualization</h3>
+        <div id="plotly-chart"></div>
+
+        <div>
+            <button class="chaos-btn" id="btn-chaos">🚨 Inject Chaos (Space Debris)</button>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('tab1')">🚀 Live Telemetry</div>
+            <div class="tab" onclick="switchTab('tab2')">🧠 RL Training Logs</div>
+            <div class="tab" onclick="switchTab('tab3')">💬 MarsNet Assistant</div>
+        </div>
+
+        <div id="tab1" class="tab-content active">
+            <p style="color: #a0a0a0;">Telemetry data active. All satellite systems operational.</p>
+        </div>
+        <div id="tab2" class="tab-content">
+            <p style="color: #a0a0a0;">RL Agent training history: Reward function stable.</p>
+        </div>
+        <div id="tab3" class="tab-content">
+            <div class="chat-box" id="chat-box">
+                <div class="chat-message assistant">Hello! I am your MarsNet Mission Copilot. How can I help you today?</div>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Ask MarsNet Assistant...">
+                <button class="chaos-btn" id="btn-send" style="background-color: #104E8B;">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            socket.emit('init_state');
+        });
+
+        const R_MARS = 3389.5;
+        const R_EARTH = 1500.0;
+        const EARTH_OFFSET_X = -35000.0;
+
+        let debrisList = [];
+        let animate = true;
+
+        function createDefaultSatellites(numSats=20) {
+            const regimes = ['LMO', 'MMO', 'AEO', 'HEO'];
+            let sats = [];
+            for (let i = 0; i < numSats; i++) {
+                sats.push({
+                    id: i + 1,
+                    regime: regimes[i % 4],
+                    base_angle: (i * (2 * Math.PI / numSats)),
+                    speed: 0.5 + (i % 5) * 0.3
+                });
+            }
+            return sats;
+        }
+
+        let satellites = createDefaultSatellites(20);
+
+        function makeSphere(r, offsetX, step=30) {
+            let u = [], v = [];
+            for (let i = 0; i <= step; i++) u.push(i * 2 * Math.PI / step);
+            for (let j = 0; j <= step; j++) v.push(j * Math.PI / step);
+
+            let x = [], y = [], z = [];
+            for (let i = 0; i <= step; i++) {
+                let xi = [], yi = [], zi = [];
+                for (let j = 0; j <= step; j++) {
+                    xi.push(r * Math.cos(u[i]) * Math.sin(v[j]) + offsetX);
+                    yi.push(r * Math.sin(u[i]) * Math.sin(v[j]));
+                    zi.push(r * Math.cos(v[j]));
+                }
+                x.push(xi); y.push(yi); z.push(zi);
+            }
+            return { x, y, z };
+        }
+
+        const marsGlobe = makeSphere(R_MARS, 0);
+        const earthGlobe = makeSphere(R_EARTH, EARTH_OFFSET_X);
+
+        function makeCircle(radius, a=radius, b=radius, c=0) {
+            let x = [], y = [], z = [];
+            for (let i = 0; i <= 100; i++) {
+                let angle = i * 2 * Math.PI / 100;
+                x.push(a * Math.cos(angle) + c);
+                y.push(b * Math.sin(angle));
+                z.push(0);
+            }
+            return { x, y, z };
+        }
+
+        const r_lmo = R_MARS + 1000;
+        const r_mmo = R_MARS + 6000;
+        const r_aeo = R_MARS + 17032;
+        const r_peri = R_MARS + 500, r_apo = R_MARS + 25000;
+        const a_heo = (r_peri + r_apo) / 2.0;
+        const c_heo = a_heo - r_peri;
+        const b_heo = Math.sqrt(a_heo * a_heo - c_heo * c_heo);
+
+        const lmo = makeCircle(r_lmo);
+        const mmo = makeCircle(r_mmo);
+        const aeo = makeCircle(r_aeo);
+        const heo = makeCircle(a_heo, a_heo, b_heo, c_heo);
+
+        const r_phobos = 9378.0;
+        const r_deimos = 23458.0;
+
+        const phobosOrbit = makeCircle(r_phobos);
+        const deimosOrbit = makeCircle(r_deimos);
+
+        const initialTraces = [
+            { type: 'surface', x: earthGlobe.x, y: earthGlobe.y, z: earthGlobe.z, colorscale: [[0, '#104E8B'], [1, '#5CACEE']], showscale: false, hoverinfo: 'skip' },
+            { type: 'surface', x: marsGlobe.x, y: marsGlobe.y, z: marsGlobe.z, colorscale: [[0, '#8B4513'], [1, '#FF7F50']], showscale: false, hoverinfo: 'skip' },
+            { type: 'scatter3d', mode: 'text', x: [0], y: [0], z: [R_MARS + 500], text: ["<b>MARS</b>"], textfont: { size: 14, color: "#FF7F50" }, showlegend: false },
+            { type: 'scatter3d', mode: 'text', x: [EARTH_OFFSET_X], y: [0], z: [R_EARTH + 500], text: ["<b>EARTH</b>"], textfont: { size: 14, color: "#5CACEE" }, showlegend: false },
+            { type: 'scatter3d', mode: 'lines', x: lmo.x, y: lmo.y, z: lmo.z, line: { color: 'rgba(255,255,255,0.4)', width: 2 }, name: 'Low Mars Orbit (LMO)' },
+            { type: 'scatter3d', mode: 'lines', x: mmo.x, y: mmo.y, z: mmo.z, line: { color: 'rgba(255,255,255,0.4)', width: 2 }, name: 'Medium Mars Orbit (MMO)' },
+            { type: 'scatter3d', mode: 'lines', x: aeo.x, y: aeo.y, z: aeo.z, line: { color: 'rgba(255,255,255,0.4)', width: 2 }, name: 'Aerostationary Orbit (AEO)' },
+            { type: 'scatter3d', mode: 'lines', x: heo.x, y: heo.y, z: heo.z, line: { color: 'rgba(255,255,255,0.4)', width: 2 }, name: 'Highly Elliptical Orbit (HEO)' },
+            { type: 'scatter3d', mode: 'markers+text', x: [0], y: [0], z: [0], marker: {size: 6, color: '#00FFCC' }, text: ['Initializing...'], name: 'Autonomous Satellites'},
+            { type: 'scatter3d', mode: 'markers', x: [], y: [], z: [], marker: { size: 5, color: 'purple' }, name: 'Space Debris' },
+            //moons Orbit Lines (traces 10 & 11)
+            { type: 'scatter3d', mode: 'lines', x: phobosOrbit.x, y:phobosOrbit.y, z: phobosOrbit.z, line: { color: 'rgba(200, 180, 160,0.4)', width: 1.5, dash: 'dot'}, name: "Phobos Orbit"},
+            { type: 'scatter3d', mode: 'lines', x: deimosOrbit.x, y:deimosOrbit.y, z: deimosOrbit.z, line: { color: 'rgba(180, 180, 180,0.4)', width: 1.5, dash: 'dot'}, name: "Deimos Orbit"},
+            //Moon Markers (Traces 12 & 13)
+            { type: 'scatter3d', mode: 'markers+text', x: [r_phobos], y: [0], z: [0], marker: { size: 7, color: '#C8B4A0'}, text: ["Phobos"], textposition: "top center", name: 'Phobos'},
+            { type: 'scatter3d', mode: 'markers+text', x: [r_deimos], y: [0], z: [0], marker: { size: 5, color: '#B0B0B0'}, text: ["Deimos"], textposition: "top center", name: 'Deimos'},
+        ];
+
+        const layout = {
+            autosize: true,
+            height: 500,
+            paper_bgcolor: 'black',
+            plot_bgcolor: 'black',
+            margin: { l: 0, r: 0, b: 0, t: 0 },
+            scene: {
+                bgcolor: 'black',
+                xaxis: { showgrid: false, zeroline: false, showticklabels: true, title: "X (km)", color: "white" },
+                yaxis: { showgrid: false, zeroline: false, showticklabels: true, title: "Y (km)", color: "white" },
+                zaxis: { showgrid: false, zeroline: false, showticklabels: true, title: "Z (km)", color: "white" },
+                aspectmode: 'data'
+            },
+            legend: { font: { color: 'white' }, bgcolor: 'rgba(0,0,0,0.5)' }
+        };
+
+        const config = { responsive: true };
+
+        // Force plot initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            Plotly.newPlot('plotly-chart', initialTraces, layout, config).then(() => {
+                Plotly.Plots.resize('plotly-chart');
+            });
+        });
+
+        let startTime = Date.now();
+        function animateFrame() {
+            if (animate) {
+                let elapsed = (Date.now() - startTime) / 1000.0 * 0.5;
+                
+                //Animate moon orbits around Mars (Phobos = Trace 12, Deimos = Trace 13)
+
+                let anglePhobos = (elapsed*1.2)%(2*Math.PI);
+                let angleDeimos = (elapsed*0.3+1.5)%(2*Math.PI);
+
+                const chartElem = document.getElementById('plotly-chart');
+                if (chartElem && chartElem.data) {
+                    //automatically finds Phobos nad Deimos traces whereever they are in the array
+                    const phobosIdx = chartElem.data.findIndex(t => t.name == 'Phobos');
+                    const deimosIdx = chartElem.data.findIndex(t => t.name == 'Deimos');
+
+                    if (phobosIdx !== -1) {
+                        Plotly.restyle('plotly-chart', {
+                            x: [[r_phobos * Math.cos(anglePhobos)]],
+                            y: [[r_phobos * Math.sin(anglePhobos)]]
+                        }, [phobosIdx]);
+                    }
+
+                    if (deimosIdx !== -1) {
+                        Plotly.restyle('plotly-chart', {
+                            x: [[r_deimos * Math.cos(angleDeimos)]],
+                            y: [[r_deimos * Math.sin(angleDeimos)]]
+                        }, [deimosIdx]);
+                    }
+                }
+            
+
+            }
+            requestAnimationFrame(animateFrame);
+        }
+        requestAnimationFrame(animateFrame);
+
+        socket.on('init_state', (data) => {
+            if (data && data.satellites && data.satellites.length > 0) {
+                satellites = data.satellites;
+
+                const xVals = data.satellites.map(s => s.x);
+                const yVals = data.satellites.map(s => s.y);
+                const zVals = data.satellites.map(s => s.z);
+                const stext = data.satellites.map(s => `Sat ${s.id} (${s.regime}) - ${s.status} [Action: ${s.last_action}]`);
+
+                const chartElem = document.getElementById('plotly-chart');
+                if (chartElem && chartElem.data){
+                    // Automatically locates the autonomous satelites trace layer
+                    const satIdx = chartElem.data.findIndex(t => t.name === 'Autonomous Satellites');
+                    if (satIdx !== -1){
+                        Plotly.restyle('plotly-chart', {
+                            x: [xVals],
+                            y: [yVals],
+                            z: [zVals],
+                            text: [stext]
+                        }, [satIdx]);
+                    }
+                }
+
+            }
+            if (data && data.debris) {
+                debrisList = data.debris;
+                updateDebrisPlot();
+            }
+        });
+
+        socket.on('satellites_updated', (data) => { satellites = data.satellites; });
+        socket.on('debris_updated', (data) => { updateDebrisPlot(); });
+
+        // Recieve Real-Time Telemerty from app.py
+        socket.on('telemetry_update', (data) => {
+            //update metric text elements
+            if (document.getElementById('rl-reward-score')){
+                document.getElementById('rl-reward-score').innerText = Number(data.total_reward).toFixed(1);
+            }
+             if (document.getElementById('rl-avoidances')){
+                 document.getElementById('rl-avoidances').innerText = data.avoidances;
+            }
+             if (document.getElementById('rl-collisions')){
+                 document.getElementById('rl-collisions').innerText = data.collisions;
+            }
+            
+            // --- ADd theses lije s to updat ehte top summary boxes ---
+             if (document.getElementById('metric-collision-risk')){
+                 document.getElementById('metric-collision-risk').innerText = data.collision_risk + "%";
+            }
+             if (document.getElementById('metric-network-coverage')){
+                 document.getElementById('metric-network-coverage').innerText = data.network_coverage + "%";
+            }
+             if (document.getElementById('metric-success-rate')){
+                document.getElementById('metric-success-rate').innerText = data.sucess_rate + "%";
+            }
+
+            //Update Satellites on Plotly Chart
+            if(data.satellites && data.satellites.length > 0){
+                satellites = data.satellites; // keep local array synced
+
+                const xVals = data.satellites.map(s => s.x);
+                const yVals = data.satellites.map(s => s.y);
+                const zVals = data.satellites.map(s => s.z);
+                const stext = data.satellites.map(s => `Sat ${s.id} (${s.regime}) - ${s.status} [Action: ${s.last_action}]`);
+
+                const chartElem = document.getElementById('plotly-chart');
+                if (chartElem && chartElem.data){
+                    // Automatically locates the autonomous satelites trace layer
+                    const satIdx = chartElem.data.findIndex(t => t.name === 'Autonomous Satellites');
+                    if (satIdx !== -1){
+                        Plotly.restyle('plotly-chart', {
+                            x: [xVals],
+                            y: [yVals],
+                            z: [zVals],
+                            text: [stext]
+                        }, [satIdx]);
+                    }
+                    
+                }
+            
+            }
+
+        });
+
+        
+
+        function updateDebrisPlot() {
+            let dx = debrisList.map(d => d.x);
+            let dy = debrisList.map(d => d.y);
+            let dz = debrisList.map(d => d.z);
+            Plotly.restyle('plotly-chart', { x: [dx], y: [dy], z: [dz] }, [9]);
+        }
+
+        const satSlider = document.getElementById('sat-slider');
+        const satVal = document.getElementById('sat-count-val');
+        satSlider.addEventListener('input', (e) => {
+            satVal.innerText = e.target.value;
+            satellites = createDefaultSatellites(parseInt(e.target.value));
+            socket.emit('update_satellites', { count: e.target.value });
+        });
+
+        document.getElementById('btn-chaos').addEventListener('click', () => {
+            socket.emit('inject_chaos');
+        });
+
+        document.getElementById('anim-toggle').addEventListener('change', (e) => {
+            animate = e.target.checked;
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        const chatBox = document.getElementById('chat-box');
+        const chatInput = document.getElementById('chat-input');
+        const btnSend = document.getElementById('btn-send');
+        let chatHistory = [];
+        let currentAssistantMessageDiv = null;
+
+        function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            const userDiv = document.createElement('div');
+            userDiv.className = 'chat-message user';
+            userDiv.innerText = text;
+            chatBox.appendChild(userDiv);
+
+            currentAssistantMessageDiv = document.createElement('div');
+            currentAssistantMessageDiv.className = 'chat-message assistant';
+            currentAssistantMessageDiv.innerText = "▌";
+            chatBox.appendChild(currentAssistantMessageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            socket.emit('send_message', { message: text, history: chatHistory });
+            chatHistory.push({ role: "user", content: text });
+            chatInput.value = '';
+        }
+
+        btnSend.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+        socket.on('chat_response_chunk', (data) => {
+            if (currentAssistantMessageDiv) {
+                if (currentAssistantMessageDiv.innerText === "▌") {
+                    currentAssistantMessageDiv.innerText = "";
+                }
+                currentAssistantMessageDiv.innerText = currentAssistantMessageDiv.innerText.replace("▌", "") + data.chunk + "▌";
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        });
+
+        socket.on('chat_response_end', () => {
+            if (currentAssistantMessageDiv) {
+                currentAssistantMessageDiv.innerText = currentAssistantMessageDiv.innerText.replace("▌", "");
+                chatHistory.push({ role: "assistant", content: currentAssistantMessageDiv.innerText });
+                currentAssistantMessageDiv = null;
+            }
+        });
+    </script>
+</body>
+</html>
