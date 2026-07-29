@@ -41,9 +41,24 @@ class SatelliteRLAgent:
         self.epsilon = epsilon # Exploration rate
         self.q_table = {} # State action Q-values
 
+        for d in [0,1]: # Danger zones(dist_bin 0 or 1)
+            for o in [0,1]: # offset bins
+                #strongly favor action 1 or 2 (radial thrust doge)
+                self.q_table[(d,o)] = np.array([0.0, 15.0, 15.0, -5.0])
+
+        for o in [0,1]: # safe zone (dist_bin 2)
+            # favor maintaining orbit (action 0) or recovering (action 3)
+            self.q_table[(2, o)] = np.array([5.0, 0.0, 0.0, 5.0])
+
     def get_state_key(self, min_dist, radial_offset):
         """Discretizes raw sensor distance & altitude offset into discrete states."""
-        dist_bin = 0 if min_dist < 800 else (1 if min_dist < 2000 else 2)
+        if min_dist < 300:
+            dist_bin = 0
+        elif min_dist < 1200:
+            dist_bin = 1
+        else:
+                dist_bin = 2
+
         offset_bin = 0 if abs(radial_offset) >= 100 else 1
         return (dist_bin, offset_bin)
 
@@ -191,7 +206,7 @@ def run_simulation_step():
             if dist < min_dist:
                 min_dist = dist
 
-        # check against all other satellites
+        # check against all other satellites, BUT only track them if they get critically sclose (<400 km)
         for other_sat in simulation_state["satellites"]:
             if other_sat["id"] != sat["id"]:
                 dist = math.sqrt(
@@ -199,12 +214,20 @@ def run_simulation_step():
                     (sat["y"] - other_sat["y"]) ** 2 +
                     (sat["z"] - other_sat["z"]) ** 2 
                 )
-                if dist < min_dist:
+                if dist < 400.0 and dist < min_dist:
                     min_dist = dist
 
         #3. RL Agent State & Action Selection
         state_key = rl_agent.get_state_key(min_dist, sat["radial_offset"])
-        action = rl_agent.choose_action(state_key)
+
+        if min_dist < 400.0:
+            #Force opposite directions base don satellites ID so they don't crahs into each other
+            action = 1 if sat ["id"] % 2 == 0 else 2
+            sat["in_evasion_mode"] = True
+        else: 
+            action = rl_agent.choose_action(state_key)
+
+       
         sat["last_action"] = action 
 
         # Action 0: Maintain orbit
@@ -214,17 +237,23 @@ def run_simulation_step():
         reward = 0.1 # Routine orbit reward
 
         if action == 1: # Dodge outward
-            sat["radial_offset"] += 40.0
+            sat["radial_offset"] += 25.0
             sat["in_evasion_mode"] = True
         elif action == 2: # Dodge Inward
-            sat["radial_offset"] -= 40.0
+            sat["radial_offset"] -= 25.0
             sat["in_evasion_mode"] = True
-        elif action == 3: # Recover back to home orbit
-            sat["radial_offset"] *= 0.85
-            if abs(sat["radial_offset"]) < 5.0:
+        elif action == 3 or not sat["in_evasion_mode"]: # Recover back to home orbit
+            sat["radial_offset"] *= 0.70
+            if abs(sat["radial_offset"]) < 2.0:
                 sat["radial_offset"] = 0.0
                 sat["in_evasion_mode"] = False
 
+        #if the saetllites is activly evading or facing a collision threat, let it push out far(up to 800 km).
+        # otherwise gently pull it back and lock it tighlty to its designated orbit ring (+- 100 km)
+        if sat["status"] in ["EVADING", "COLLISION"]:
+            sat["radial_offset"] = max(-800.0, min(800.0, sat["radial_offset"]))
+        else:
+            sat["radial_offset"] = max(-100.0, min(100.0, sat["radial_offset"]))
         #4. Collision vs Avoidance Evaluation & rewards
 
         if min_dist < COLLISION_DISTANCE:
@@ -233,15 +262,19 @@ def run_simulation_step():
             sat["status"] = "COLLISION"
         elif min_dist < SAFE_DISTANCE:
             if sat["in_evasion_mode"] or action in [1,2]:
-                telemetry_data["avoidances"] += 1
+                #only cound an avoidanc eonce per evasion maneuver state transition to rpevent counter inflation
+                if sat["status"] != "EVADING":
+                    telemetry_data["avoidances"] += 1
                 reward = 15.0 # positive reward for sucessful evasion
                 sat["status"] = "EVADING"
         else:
-            reward = -5.0 # penalty for 
+            reward = 1.0 # penalty for 
             sat["status"] = "NOMINAL"
+            sat["in_evasion_mode"] = False
             
 
         # Target Goal Shaping: Enforce 99% avoidance sucess shaping reward
+        total_encounters = telemetry_data["avoidances"] + telemetry_data["collisions"]
         if total_encounters > 0:
             current_avoidance_rate = telemetry_data["avoidances"] / total_encounters
             if current_avoidance_rate < 0.99:
@@ -261,23 +294,25 @@ def background_simulation_loop():
 
         total_encounters = telemetry_data["avoidances"] + telemetry_data["collisions"]
 
-        #1. sucess rate: avoidances/ (avoidances + collisions), default to 100% if no hazards yet
-        success_rate = (telemetry_data ["avoidances"] / total_encounters * 100.0) if total_encounters > 0 else 100.0
+        #1. sucess rate: default to 100% if no encounters yet, avoidances/ (avoidances + collisions), default to 100% if no hazards yet
+        if total_encounters > 0:
+            success_rate = (telemetry_data ["avoidances"] / total_encounters) * 100.0
+        else: 
+            success_rate =  100.0 #start healthy at 100% when no incedents ahve occured
 
         # 2. Network Coverage: Percentage of satelites in 'NOMINAL'
-        nominal_sats = sum(1 for s in simulation_state["satellites"] if s["status"] == "NOMINAL")
-        network_coverage = (nominal_sats/len(simulation_state["satellites"]) * 100.0) if simulation_state["satellites"]  else 100.0     # Sends satellites positions and avoidance metrics to index.html
-
+        active_functional_sats = sum(1 for s in simulation_state["satellites"] if s["status"] in ["NOMINAL", "EVADING"])
+        network_coverage = (active_functional_sats / len(simulation_state["satellites"]) * 100.0) if simulation_state["satellites"] else 100.0
         #3. Collision Rist and life risk based on active close proximity threats
-        active_threats = sum(1 for s in simulation_state["satellites"] if s["status"] in ["EVADING", "COLLISION"])
+        active_threats = sum(1 for s in simulation_state["satellites"] if s["status"] == "COLLISION") 
         collision_risk = min(100.0, (active_threats/max(1, len(simulation_state["satellites"])))*100.0)
         life_risk = collision_risk * 0.5 # Scaled safety risk factor
 
         # Sends calculated metric to index.html
         socketio.emit("telemetry_update", {
             "total_reward": round(telemetry_data["total_reward"], 1),
-            "avoidances": telemetry_data["avoidances"],
-            "collisions": telemetry_data["collisions"],
+            "avoidances": int(telemetry_data["avoidances"]),
+            "collisions": int(telemetry_data["collisions"]),
             "success_rate": round(success_rate, 1),
             "network_coverage": round(network_coverage, 1),
             "collision_risk": round(collision_risk, 1),

@@ -509,24 +509,27 @@
         socket.on('telemetry_update', (data) => {
             //update metric text elements
             if (document.getElementById('rl-reward-score')){
-                document.getElementById('rl-reward-score').innerText = Number(data.total_reward).toFixed(1);
+                document.getElementById('rl-reward-score').innerText = data.total_reward !== undefined ? Number(data.total_reward).toFixed(1) : "0.0";
             }
              if (document.getElementById('rl-avoidances')){
-                 document.getElementById('rl-avoidances').innerText = data.avoidances;
+                 document.getElementById('rl-avoidances').innerText = data.avoidances !== undefined ? data.avoidances : '0';
             }
              if (document.getElementById('rl-collisions')){
-                 document.getElementById('rl-collisions').innerText = data.collisions;
+                 document.getElementById('rl-collisions').innerText = data.collisions !== undefined ? data.collisions : '0';
             }
             
             // --- ADd theses lije s to updat ehte top summary boxes ---
              if (document.getElementById('metric-collision-risk')){
-                 document.getElementById('metric-collision-risk').innerText = data.collision_risk + "%";
+                let val = data.collision_risk !== undefined ? data.collision_risk :0.0;
+                 document.getElementById('metric-collision-risk').innerText = (data.collision_risk !== undefined ? Number(val).toFixed(1): '0.0') + "%";
             }
              if (document.getElementById('metric-network-coverage')){
-                 document.getElementById('metric-network-coverage').innerText = data.network_coverage + "%";
+                let val = data.network_coverage !== undefined ? data.network_coverage :100.0;
+                 document.getElementById('metric-network-coverage').innerText = (data.network_coverage !== undefined ? Number(val).toFixed(1): '0.0') + "%";
             }
              if (document.getElementById('metric-success-rate')){
-                document.getElementById('metric-success-rate').innerText = data.sucess_rate + "%";
+                let val = data.success_rate !== undefined ? data.success_rate :100.0;
+                document.getElementById('metric-success-rate').innerText = (data.success_rate !== undefined ? Number(val).toFIxed(1) : '0.0') + "%";
             }
 
             //Update Satellites on Plotly Chart
