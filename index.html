@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark" id="html-root" style="--accent-color: #ff4b4b;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,26 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <style>
+        :root {
+            --bg-app: #0e1117;
+            --sidebar-bg: #161920;
+            --card-bg: #1e222b;
+            --text-main: #ffffff;
+            --text-muted: #9ca3af;
+            --border-color: #2d3342;
+            --accent-color: #ff4b4b;
+            --accent-glow: rgba(255, 75, 75, 0.3);
+        }
+
+        .light {
+            --bg-app: #f1f5f9;
+            --sidebar-bg: #ffffff;
+            --card-bg: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --border-color: #cbd5e1;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -17,37 +37,40 @@
         }
 
         body {
-            background-color: #0e1117;
-            color: #ffffff;
+            background-color: var(--bg-app);
+            color: var(--text-main);
             display: flex;
             height: 100vh;
             overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .sidebar {
-            width: 320px;
-            background-color: #262730;
+            width: 340px;
+            background-color: var(--sidebar-bg);
             padding: 20px;
             display: flex;
             flex-direction: column;
             gap: 15px;
             overflow-y: auto;
-            border-right: 1px solid #363940;
+            border-right: 1px solid var(--border-color);
             flex-shrink: 0;
+            backdrop-filter: blur(12px);
         }
 
         .sidebar h2 {
             font-size: 1.2rem;
-            color: #ff4b4b;
+            color: var(--accent-color);
             margin-bottom: 5px;
         }
 
         .info-box {
-            background-color: #1e1e24;
+            background-color: var(--card-bg);
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 6px;
             font-size: 0.85rem;
-            color: #b0b0b0;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
         }
 
         .control-group {
@@ -58,15 +81,15 @@
 
         label {
             font-size: 0.85rem;
-            color: #e0e0e0;
+            color: var(--text-main);
         }
 
         input[type="range"], input[type="number"], select {
             width: 100%;
-            padding: 5px;
-            background-color: #0e1117;
-            border: 1px solid #4a4a4a;
-            color: white;
+            padding: 6px;
+            background-color: var(--bg-app);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
             border-radius: 4px;
         }
 
@@ -85,30 +108,31 @@
             gap: 15px;
         }
 
-        .metric-card {
-            background-color: #262730;
+        .metric-card, .card {
+            background-color: var(--card-bg);
             padding: 15px;
             border-radius: 8px;
-            border: 1px solid #363940;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .metric-title {
             font-size: 0.8rem;
-            color: #a0a0a0;
+            color: var(--text-muted);
         }
 
         .metric-value {
             font-size: 1.5rem;
             font-weight: bold;
             margin: 5px 0;
+            color: var(--text-main);
         }
 
         .metric-sub {
             font-size: 0.75rem;
-            color: #00ffcc;
+            color: var(--accent-color);
         }
 
-        /* Fixed styling to prevent Plotly canvas collapse */
         #plotly-chart {
             width: 100%;
             height: 500px;
@@ -117,45 +141,49 @@
             border-radius: 8px;
             position: relative;
             display: block;
+            border: 1px solid var(--border-color);
         }
 
         .chaos-btn {
-            background-color: #ff4b4b;
+            background-color: var(--accent-color);
             color: white;
             border: none;
             padding: 10px;
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
+            transition: opacity 0.2s;
         }
 
         .chaos-btn:hover {
-            background-color: #d43f3f;
+            opacity: 0.9;
         }
 
         .tabs {
             display: flex;
-            border-bottom: 2px solid #363940;
+            border-bottom: 2px solid var(--border-color);
             margin-top: 10px;
         }
 
         .tab {
             padding: 10px 20px;
             cursor: pointer;
-            color: #a0a0a0;
+            color: var(--text-muted);
         }
 
         .tab.active {
-            color: #ff4b4b;
-            border-bottom: 2px solid #ff4b4b;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
             font-weight: bold;
         }
 
         .tab-content {
             display: none;
-            background-color: #262730;
+            background-color: var(--card-bg);
             padding: 15px;
             border-radius: 0 0 8px 8px;
+            border: 1px solid var(--border-color);
+            border-top: none;
         }
 
         .tab-content.active {
@@ -165,11 +193,11 @@
         .chat-box {
             height: 200px;
             overflow-y: auto;
-            border: 1px solid #363940;
+            border: 1px solid var(--border-color);
             padding: 10px;
             border-radius: 5px;
             margin-bottom: 10px;
-            background: #0e1117;
+            background: var(--bg-app);
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -183,12 +211,15 @@
         }
 
         .chat-message.user {
-            background-color: #104E8B;
+            background-color: var(--accent-color);
+            color: white;
             align-self: flex-end;
         }
 
         .chat-message.assistant {
-            background-color: #363940;
+            background-color: var(--sidebar-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
             align-self: flex-start;
         }
 
@@ -198,7 +229,17 @@
         }
 
         .chat-input-container input {
-            flex-grow: 1;
+            flex-grow: l;
+        }
+
+        .theme-controls-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
         }
     </style>
 </head>
@@ -206,6 +247,14 @@
 
     <div class="sidebar">
         <h2>🚀 MarsNet-RL Control</h2>
+
+        <div class="theme-controls-bar">
+            <span style="font-size: 0.85rem;">🎨 Appearance</span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="color" id="accent-picker" value="#ff4b4b" title="Accent Color" style="width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; background: transparent;">
+                <button id="theme-toggle" style="background: transparent; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; cursor: pointer; color: var(--text-main);">🌙</button>
+            </div>
+        </div>
 
         <div class="card">
             <div class="metric-title">Cumulative RL Reward Points</div>
@@ -219,11 +268,11 @@
             </div>
             <div>
                 <div class="metric-title">Collisions</div>
-                <div class="metric-value hazard" id="rl-collisions">0</div>
+                <div class="metric-value" id="rl-collisions">0</div>
             </div>
         </div>
         <div class="control-group">
-            <label for="sat-slider">Number of Satellites: <span id = "sat-count-val">20</span></label>
+            <label for="sat-slider">Number of Satellites: <span id="sat-count-val">20</span></label>
             <input type="range" id="sat-slider" min="5" max="50" value="20">
         </div>
 
@@ -239,7 +288,7 @@
             <label><input type="checkbox" id="anim-toggle" checked> ▶️ Animate Satellite Orbits</label>
         </div>
 
-        <hr style="border-color: #363940;">
+        <hr style="border-color: var(--border-color);">
 
         <div class="control-group">
             <label>Max Delta-V (m/s)</label>
@@ -259,7 +308,7 @@
 
     <div class="main-content">
         <h1>🛰️ MarsNet-RL: Autonomous Orbital Routing</h1>
-        <p style="color: #a0a0a0; font-size: 0.9rem;">Objective: Maintain >90% network uptime while avoiding 99% of orbital collisions.</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Objective: Maintain >90% network uptime while avoiding 99% of orbital collisions.</p>
 
         <div class="metrics-row">
             <div class="metric-card">
@@ -293,10 +342,10 @@
         </div>
 
         <div id="tab1" class="tab-content active">
-            <p style="color: #a0a0a0;">Telemetry data active. All satellite systems operational.</p>
+            <p style="color: var(--text-muted);">Telemetry data active. All satellite systems operational.</p>
         </div>
         <div id="tab2" class="tab-content">
-            <p style="color: #a0a0a0;">RL Agent training history: Reward function stable.</p>
+            <p style="color: var(--text-muted);">RL Agent training history: Reward function stable.</p>
         </div>
         <div id="tab3" class="tab-content">
             <div class="chat-box" id="chat-box">
@@ -304,12 +353,57 @@
             </div>
             <div class="chat-input-container">
                 <input type="text" id="chat-input" placeholder="Ask MarsNet Assistant...">
-                <button class="chaos-btn" id="btn-send" style="background-color: #104E8B;">Send</button>
+                <button class="chaos-btn" id="btn-send">Send</button>
             </div>
         </div>
     </div>
 
     <script>
+        // Theme and Accent Controller Logic
+        const themeToggle = document.getElementById('theme-toggle');
+        const accentPicker = document.getElementById('accent-picker');
+        const htmlRoot = document.getElementById('html-root');
+
+        const savedTheme = localStorage.getItem('marsnet_theme') || 'dark';
+        const savedAccent = localStorage.getItem('marsnet_accent') || '#ff4b4b';
+
+        if (savedTheme === 'light') {
+            htmlRoot.classList.remove('dark');
+            htmlRoot.classList.add('light');
+            themeToggle.innerText = '☀️';
+        } else {
+            htmlRoot.classList.add('dark');
+            htmlRoot.classList.remove('light');
+            themeToggle.innerText = '🌙';
+        }
+
+        setAccentColor(savedAccent);
+        accentPicker.value = savedAccent;
+
+        themeToggle.addEventListener('click', () => {
+            if (htmlRoot.classList.contains('dark')) {
+                htmlRoot.classList.remove('dark');
+                htmlRoot.classList.add('light');
+                themeToggle.innerText = '☀️';
+                localStorage.setItem('marsnet_theme', 'light');
+            } else {
+                htmlRoot.classList.remove('light');
+                htmlRoot.classList.add('dark');
+                themeToggle.innerText = '🌙';
+                localStorage.setItem('marsnet_theme', 'dark');
+            }
+        });
+
+        accentPicker.addEventListener('input', (e) => {
+            setAccentColor(e.target.value);
+            localStorage.setItem('marsnet_accent', e.target.value);
+        });
+
+        function setAccentColor(hex) {
+            document.documentElement.style.setProperty('--accent-color', hex);
+        }
+
+        // Original Application Socket & Plotly Code
         const socket = io();
 
         socket.on('connect', () => {
@@ -402,10 +496,8 @@
             { type: 'scatter3d', mode: 'lines', x: heo.x, y: heo.y, z: heo.z, line: { color: 'rgba(255,255,255,0.4)', width: 2 }, name: 'Highly Elliptical Orbit (HEO)' },
             { type: 'scatter3d', mode: 'markers+text', x: [0], y: [0], z: [0], marker: {size: 6, color: '#00FFCC' }, text: ['Initializing...'], name: 'Autonomous Satellites'},
             { type: 'scatter3d', mode: 'markers', x: [], y: [], z: [], marker: { size: 5, color: 'purple' }, name: 'Space Debris' },
-            //moons Orbit Lines (traces 10 & 11)
-            { type: 'scatter3d', mode: 'lines', x: phobosOrbit.x, y:phobosOrbit.y, z: phobosOrbit.z, line: { color: 'rgba(200, 180, 160,0.4)', width: 1.5, dash: 'dot'}, name: "Phobos Orbit"},
-            { type: 'scatter3d', mode: 'lines', x: deimosOrbit.x, y:deimosOrbit.y, z: deimosOrbit.z, line: { color: 'rgba(180, 180, 180,0.4)', width: 1.5, dash: 'dot'}, name: "Deimos Orbit"},
-            //Moon Markers (Traces 12 & 13)
+            { type: 'scatter3d', mode: 'lines', x: phobosOrbit.x, y: phobosOrbit.y, z: phobosOrbit.z, line: { color: 'rgba(200, 180, 160,0.4)', width: 1.5, dash: 'dot'}, name: "Phobos Orbit"},
+            { type: 'scatter3d', mode: 'lines', x: deimosOrbit.x, y: deimosOrbit.y, z: deimosOrbit.z, line: { color: 'rgba(180, 180, 180,0.4)', width: 1.5, dash: 'dot'}, name: "Deimos Orbit"},
             { type: 'scatter3d', mode: 'markers+text', x: [r_phobos], y: [0], z: [0], marker: { size: 7, color: '#C8B4A0'}, text: ["Phobos"], textposition: "top center", name: 'Phobos'},
             { type: 'scatter3d', mode: 'markers+text', x: [r_deimos], y: [0], z: [0], marker: { size: 5, color: '#B0B0B0'}, text: ["Deimos"], textposition: "top center", name: 'Deimos'},
         ];
@@ -428,7 +520,6 @@
 
         const config = { responsive: true };
 
-        // Force plot initialization
         window.addEventListener('DOMContentLoaded', () => {
             Plotly.newPlot('plotly-chart', initialTraces, layout, config).then(() => {
                 Plotly.Plots.resize('plotly-chart');
@@ -439,15 +530,11 @@
         function animateFrame() {
             if (animate) {
                 let elapsed = (Date.now() - startTime) / 1000.0 * 0.5;
-                
-                //Animate moon orbits around Mars (Phobos = Trace 12, Deimos = Trace 13)
-
                 let anglePhobos = (elapsed*1.2)%(2*Math.PI);
                 let angleDeimos = (elapsed*0.3+1.5)%(2*Math.PI);
 
                 const chartElem = document.getElementById('plotly-chart');
                 if (chartElem && chartElem.data) {
-                    //automatically finds Phobos nad Deimos traces whereever they are in the array
                     const phobosIdx = chartElem.data.findIndex(t => t.name == 'Phobos');
                     const deimosIdx = chartElem.data.findIndex(t => t.name == 'Deimos');
 
@@ -465,8 +552,6 @@
                         }, [deimosIdx]);
                     }
                 }
-            
-
             }
             requestAnimationFrame(animateFrame);
         }
@@ -475,7 +560,6 @@
         socket.on('init_state', (data) => {
             if (data && data.satellites && data.satellites.length > 0) {
                 satellites = data.satellites;
-
                 const xVals = data.satellites.map(s => s.x);
                 const yVals = data.satellites.map(s => s.y);
                 const zVals = data.satellites.map(s => s.z);
@@ -483,18 +567,11 @@
 
                 const chartElem = document.getElementById('plotly-chart');
                 if (chartElem && chartElem.data){
-                    // Automatically locates the autonomous satelites trace layer
                     const satIdx = chartElem.data.findIndex(t => t.name === 'Autonomous Satellites');
                     if (satIdx !== -1){
-                        Plotly.restyle('plotly-chart', {
-                            x: [xVals],
-                            y: [yVals],
-                            z: [zVals],
-                            text: [stext]
-                        }, [satIdx]);
+                        Plotly.restyle('plotly-chart', { x: [xVals], y: [yVals], z: [zVals], text: [stext] }, [satIdx]);
                     }
                 }
-
             }
             if (data && data.debris) {
                 debrisList = data.debris;
@@ -505,37 +582,31 @@
         socket.on('satellites_updated', (data) => { satellites = data.satellites; });
         socket.on('debris_updated', (data) => { updateDebrisPlot(); });
 
-        // Recieve Real-Time Telemerty from app.py
         socket.on('telemetry_update', (data) => {
-            //update metric text elements
             if (document.getElementById('rl-reward-score')){
                 document.getElementById('rl-reward-score').innerText = data.total_reward !== undefined ? Number(data.total_reward).toFixed(1) : "0.0";
             }
-             if (document.getElementById('rl-avoidances')){
-                 document.getElementById('rl-avoidances').innerText = data.avoidances !== undefined ? data.avoidances : '0';
+            if (document.getElementById('rl-avoidances')){
+                document.getElementById('rl-avoidances').innerText = data.avoidances !== undefined ? data.avoidances : '0';
             }
-             if (document.getElementById('rl-collisions')){
-                 document.getElementById('rl-collisions').innerText = data.collisions !== undefined ? data.collisions : '0';
+            if (document.getElementById('rl-collisions')){
+                document.getElementById('rl-collisions').innerText = data.collisions !== undefined ? data.collisions : '0';
             }
-            
-            // --- ADd theses lije s to updat ehte top summary boxes ---
-             if (document.getElementById('metric-collision-risk')){
-                let val = data.collision_risk !== undefined ? data.collision_risk :0.0;
-                 document.getElementById('metric-collision-risk').innerText = (data.collision_risk !== undefined ? Number(val).toFixed(1): '0.0') + "%";
+            if (document.getElementById('metric-collision-risk')){
+                let val = data.collision_risk !== undefined ? data.collision_risk : 0.0;
+                document.getElementById('metric-collision-risk').innerText = Number(val).toFixed(1) + "%";
             }
-             if (document.getElementById('metric-network-coverage')){
-                let val = data.network_coverage !== undefined ? data.network_coverage :100.0;
-                 document.getElementById('metric-network-coverage').innerText = (data.network_coverage !== undefined ? Number(val).toFixed(1): '0.0') + "%";
+            if (document.getElementById('metric-network-coverage')){
+                let val = data.network_coverage !== undefined ? data.network_coverage : 100.0;
+                document.getElementById('metric-network-coverage').innerText = Number(val).toFixed(1) + "%";
             }
-             if (document.getElementById('metric-success-rate')){
-                let val = data.success_rate !== undefined ? data.success_rate :100.0;
-                document.getElementById('metric-success-rate').innerText = (data.success_rate !== undefined ? Number(val).toFIxed(1) : '0.0') + "%";
+            if (document.getElementById('metric-success-rate')){
+                let val = data.success_rate !== undefined ? data.success_rate : 100.0;
+                document.getElementById('metric-success-rate').innerText = Number(val).toFixed(1) + "%";
             }
 
-            //Update Satellites on Plotly Chart
             if(data.satellites && data.satellites.length > 0){
-                satellites = data.satellites; // keep local array synced
-
+                satellites = data.satellites;
                 const xVals = data.satellites.map(s => s.x);
                 const yVals = data.satellites.map(s => s.y);
                 const zVals = data.satellites.map(s => s.z);
@@ -543,24 +614,13 @@
 
                 const chartElem = document.getElementById('plotly-chart');
                 if (chartElem && chartElem.data){
-                    // Automatically locates the autonomous satelites trace layer
                     const satIdx = chartElem.data.findIndex(t => t.name === 'Autonomous Satellites');
                     if (satIdx !== -1){
-                        Plotly.restyle('plotly-chart', {
-                            x: [xVals],
-                            y: [yVals],
-                            z: [zVals],
-                            text: [stext]
-                        }, [satIdx]);
+                        Plotly.restyle('plotly-chart', { x: [xVals], y: [yVals], z: [zVals], text: [stext] }, [satIdx]);
                     }
-                    
                 }
-            
             }
-
         });
-
-        
 
         function updateDebrisPlot() {
             let dx = debrisList.map(d => d.x);
