@@ -341,6 +341,14 @@ def handle_connect():
         "debris": simulation_state["debris"]
     })
 
+@socketio.on("init_state_sync")
+def handle_init_state_sync():
+    emit("init_state", {
+        "num_satellites": simulation_state["num_satellites"],
+        "satellites": simulation_state["satellites"],
+        "debris": simulation_state["debris"]
+    })
+
 @socketio.on("update_satellites")
 def handle_update_satellites(data):
     num_sats = int(data.get("count", 20))

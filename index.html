@@ -558,6 +558,12 @@
         requestAnimationFrame(animateFrame);
 
         socket.on('init_state', (data) => {
+            //sync the slider position with what the backend sent us on load
+            if (data && data.num_satellites) {
+                satSlider.value = data.num_satellites;
+                satVal.innerText = data.num_satellites;
+            }
+            
             if (data && data.satellites && data.satellites.length > 0) {
                 satellites = data.satellites;
                 const xVals = data.satellites.map(s => s.x);
@@ -631,11 +637,22 @@
 
         const satSlider = document.getElementById('sat-slider');
         const satVal = document.getElementById('sat-count-val');
+       
+       //Dynamically update the text number as you drag the slider
         satSlider.addEventListener('input', (e) => {
             satVal.innerText = e.target.value;
-            satellites = createDefaultSatellites(parseInt(e.target.value));
-            socket.emit('update_satellites', { count: e.target.value });
         });
+
+        //only emit the change to python whe you release the slider or finsih dragging
+         satSlider.addEventListener('chnage', (e) => {
+            const count = parseInt(e.target.value);
+            socket.emit('update_satellites', { count: count });
+        });
+
+       
+
+
+
 
         document.getElementById('btn-chaos').addEventListener('click', () => {
             socket.emit('inject_chaos');
