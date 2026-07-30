@@ -97,6 +97,16 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+        @keyframes heroIntro {
+            0%   { opacity: 0; transform: translateY(-18px) scale(0.97); text-shadow: 0 0 0 transparent; }
+            55%  { opacity: 1; transform: translateY(0) scale(1.01); text-shadow: 0 0 26px var(--accent-glow); }
+            100% { opacity: 1; transform: translateY(0) scale(1); text-shadow: 0 0 0 transparent; }
+        }
+
+        .hero-title {
+            animation: heroIntro 1.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+        }
     </style>
 </head>
 <body class="font-sans antialiased overflow-x-hidden bg-grid">
@@ -139,13 +149,13 @@
             <span>Autonomous Orbital Routing Platform</span>
         </div>
 
-        <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight mb-6">
+        <h1 class="hero-title text-5xl md:text-7xl font-extrabold tracking-tight max-w-4xl mx-auto leading-tight mb-6">
             Build & Orchestrate Autonomous <br/>
             <span class="text-mars-gradient">Interplanetary Satellites</span>
         </h1>
 
         <p class="text-lg md:text-xl text-[var(--text-muted)] max-w-2xl mx-auto mb-10 leading-relaxed">
-            Real-time 3D telemetry visualization, dynamic space debris chaos injection, and Groq LLM copilot routing powered by reinforcement learning abstractions.
+            Real-time 3D orbital telemetry, a predictive congestion engine that forecasts intersecting orbits before they happen, and reinforcement learning agents measured live against a no-RL baseline fleet.
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -182,11 +192,12 @@
 
     <div class="w-full py-8 border-y border-[var(--border-color)] bg-black/5 overflow-hidden relative">
         <div class="flex whitespace-nowrap animate-marquee space-x-12 text-sm text-[var(--text-muted)] font-mono tracking-widest uppercase">
-            <span>• Plotly 3D Orbital Trajectories</span>
+            <span>• Three.js WebGL Orbital Trajectories</span>
+            <span>• Predictive Congestion Forecasting</span>
             <span>• Groq Llama 3.3 Integration</span>
             <span>• Space Debris Chaos Injection</span>
             <span>• Socket.IO Live Telemetry Streams</span>
-            <span>• Autonomous RL Routing Agent</span>
+            <span>• RL vs. No-RL Baseline Comparison</span>
         </div>
     </div>
 
@@ -203,7 +214,7 @@
                 </div>
                 <h3 class="text-xl font-bold mb-2">Real-Time 3D Telemetry</h3>
                 <p class="text-[var(--text-muted)] text-sm leading-relaxed">
-                    Interactive Plotly 3D visualization rendering Mars, Earth, Phobos, Deimos, and satellite orbital shells in dynamic real time.
+                    A WebGL (Three.js) scene rendering Mars, Earth, Phobos, Deimos, and satellite orbital shells with smooth real-time updates at 10Hz.
                 </p>
             </div>
 
@@ -221,9 +232,9 @@
                 <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-6 group-hover:scale-110 transition-transform">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                 </div>
-                <h3 class="text-xl font-bold mb-2">Space Debris Chaos Mode</h3>
+                <h3 class="text-xl font-bold mb-2">Predictive Congestion Engine</h3>
                 <p class="text-[var(--text-muted)] text-sm leading-relaxed">
-                    Inject high-speed orbital space debris field hazards dynamically to test adaptive routing and collision avoidance maneuvers.
+                    Forecasts intersecting orbits before they become reactive threats, and benchmarks the RL fleet's collision rate live against a no-RL baseline to track our ≥70% collision reduction target.
                 </p>
             </div>
         </div>
