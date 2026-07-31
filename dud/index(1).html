@@ -1127,6 +1127,7 @@
             const points = [];
             for (let i = 0; i <= segments; i++) {
                 const t = (i / segments) * Math.PI * 2;
+                // Revert back to x and y coordinates so your orbitals stay flat and horizontal
                 points.push(new THREE.Vector3(a * Math.cos(t) + c, b * Math.sin(t), 0));
             }
             return new THREE.BufferGeometry().setFromPoints(points);
@@ -1179,7 +1180,14 @@
             const seen = new Set();
             satellites.forEach(sat => {
                 const entry = ensureSatEntry(sat.id);
-                entry.target.set(sat.x, sat.y, sat.z);
+                
+                // Explicitly pull x, y, z from the backend socket payload
+                const targetX = Number(sat.x) || 0;
+                const targetY = Number(sat.y) || 0;
+                const targetZ = Number(sat.z) || 0;
+                
+                entry.target.set(targetX, targetY, targetZ);
+
                 if (!entry.initialized) {
                     entry.mesh.position.copy(entry.target);
                     entry.initialized = true;
