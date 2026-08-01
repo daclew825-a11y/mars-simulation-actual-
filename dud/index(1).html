@@ -1,1509 +1,188 @@
 <!DOCTYPE html>
-<html lang="en" class="dark" id="html-root" style="--accent-color: #ff4b4b;">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarsNet-RL | Autonomous Orbital Routing</title>
-
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-
     <style>
-        :root {
-            --bg-app: #0e1117;
-            --sidebar-bg: #161920;
-            --card-bg: #1e222b;
-            --text-main: #ffffff;
-            --text-muted: #9ca3af;
-            --border-color: #2d3342;
-            --accent-color: #ff4b4b;
-            --accent-glow: rgba(255, 75, 75, 0.3);
-        }
-
-        .light {
-            --bg-app: #f1f5f9;
-            --sidebar-bg: #ffffff;
-            --card-bg: #e2e8f0;
-            --text-main: #0f172a;
-            --text-muted: #475569;
-            --border-color: #cbd5e1;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
         body {
-            background-color: var(--bg-app);
-            color: var(--text-main);
+            background-color: #0e1117;
+            color: #ffffff;
+            margin: 0;
             display: flex;
             height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             overflow: hidden;
-            transition: background-color 0.3s ease, color 0.3s ease;
         }
-
         .sidebar {
-            width: 340px;
-            background-color: var(--sidebar-bg);
+            width: 320px;
+            background: #161920;
+            border-right: 1px solid #2d3342;
+            display: flex;
+            flex-direction: column;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
             gap: 15px;
-            overflow-y: auto;
-            border-right: 1px solid var(--border-color);
-            flex-shrink: 0;
-            backdrop-filter: blur(12px);
         }
-
-        .sidebar h2 {
-            font-size: 1.2rem;
-            color: var(--accent-color);
-            margin-bottom: 5px;
-        }
-
-        .info-box {
-            background-color: var(--card-bg);
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        label {
-            font-size: 0.85rem;
-            color: var(--text-main);
-        }
-
-        input[type="range"], input[type="number"], select {
-            width: 100%;
-            padding: 6px;
-            background-color: var(--bg-app);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            border-radius: 4px;
-        }
-
-        .main-content {
+        .main-panel {
             flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-            background: radial-gradient(circle at 15% 0%, rgba(255,75,75,0.05), transparent 45%);
-        }
-
-        @keyframes heroIntro {
-            0%   { opacity: 0; transform: translateY(-16px) scale(0.96); text-shadow: 0 0 0 transparent; }
-            55%  { opacity: 1; transform: translateY(0) scale(1.015); text-shadow: 0 0 22px var(--accent-glow); }
-            100% { opacity: 1; transform: translateY(0) scale(1); text-shadow: 0 0 0 transparent; }
-        }
-
-        h1.app-title {
-            animation: heroIntro 1.15s cubic-bezier(0.2, 0.9, 0.3, 1) both;
-        }
-
-        .metrics-row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-        }
-
-        .metric-card, .card {
-            background-color: var(--card-bg);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .metric-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 22px -8px rgba(0, 0, 0, 0.4);
-        }
-
-        .metric-title {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        .metric-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: 5px 0;
-            color: var(--text-main);
-        }
-
-        .metric-sub {
-            font-size: 0.75rem;
-            color: var(--accent-color);
-        }
-
-        #viz-container {
-            width: 100%;
-            height: 520px;
-            min-height: 520px;
-            background: radial-gradient(ellipse at 50% 40%, #0a0c12 0%, #000000 75%);
-            border-radius: 8px;
-            position: relative;
-            display: block;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-            cursor: grab;
-        }
-
-        #viz-container:active { cursor: grabbing; }
-        #viz-container canvas { display: block; }
-
-        .viz-hint {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.55);
-            background: rgba(0,0,0,0.35);
-            padding: 5px 10px;
-            border-radius: 6px;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        .viz-legend {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            background: rgba(0,0,0,0.45);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.7rem;
-            color: #e5e7eb;
-            z-index: 5;
-            max-width: 90%;
-        }
-
-        .viz-legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-        .viz-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-
-        .inspector-panel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 220px;
-            background: rgba(15, 18, 26, 0.88);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 12px;
-            font-size: 0.78rem;
-            color: #e5e7eb;
-            z-index: 6;
-            display: none;
-            backdrop-filter: blur(6px);
-        }
-
-        .inspector-panel.visible { display: block; animation: fadeInUp 0.2s ease; }
-        .inspector-panel h4 { font-size: 0.85rem; margin-bottom: 6px; color: var(--accent-color); display: flex; justify-content: space-between; align-items: center; }
-        .inspector-panel .close-btn { cursor: pointer; color: var(--text-muted); font-weight: bold; }
-        .inspector-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); }
-        .inspector-row span:first-child { color: var(--text-muted); }
-
-        .action-btn {
-            background-color: var(--card-bg);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: opacity 0.2s, background-color 0.2s, transform 0.1s;
-            flex: 1;
-        }
-
-        .action-btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
-        .action-btn:active:not(:disabled) { transform: translateY(0); }
-
-        .action-btn.primary {
-            background-color: var(--accent-color);
-            color: white;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 14px var(--accent-glow);
-        }
-
-        .action-btn:disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        .btn-row { display: flex; gap: 8px; }
-
-        .chaos-btn {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: opacity 0.2s, transform 0.1s;
-        }
-
-        .chaos-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .chaos-btn:active { transform: translateY(0); }
-
-        .status-badge {
-            font-size: 0.75rem;
-            font-weight: bold;
-            padding: 3px 10px;
-            border-radius: 999px;
-            display: inline-block;
-        }
-
-        .status-badge.running { background: rgba(34,197,94,0.15); color: #22c55e; }
-        .status-badge.paused { background: rgba(148,163,184,0.15); color: #94a3b8; }
-
-        .progress-track {
-            width: 100%;
-            height: 10px;
-            border-radius: 999px;
-            background: var(--bg-app);
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-            margin-top: 6px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            border-radius: 999px;
-            transition: width 0.3s ease, background-color 0.3s ease;
-        }
-
-        .tabs {
-            display: flex;
-            border-bottom: 2px solid var(--border-color);
-            margin-top: 10px;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: color 0.2s;
-        }
-
-        .tab.active {
-            color: var(--accent-color);
-            border-bottom: 2px solid var(--accent-color);
-            font-weight: bold;
-        }
-
-        .tab-content {
-            display: none;
-            background-color: var(--card-bg);
-            padding: 15px;
-            border-radius: 0 0 8px 8px;
-            border: 1px solid var(--border-color);
-            border-top: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .log-feed {
-            height: 220px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 4px;
-            font-family: "Consolas", monospace;
-            font-size: 0.8rem;
-        }
-
-        .log-line { color: var(--text-muted); }
-        .log-line.evade { color: #f59e0b; }
-        .log-line.collision { color: #ef4444; }
-        .log-line.predicted { color: #fb923c; }
-        .log-line.fuel { color: #9ca3af; }
-
-        /* --- Briefing panel --- */
-        .briefing-card {
-            background: linear-gradient(160deg, var(--card-bg), var(--sidebar-bg));
-            border: 1px solid var(--border-color);
-            border-left: 3px solid var(--accent-color);
-            border-radius: 10px;
-            padding: 16px 18px;
-        }
-
-        .briefing-card h3 {
-            font-size: 0.95rem;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .briefing-card p {
-            font-size: 0.85rem;
-            line-height: 1.55;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .briefing-card p:last-child { margin-bottom: 0; }
-        .briefing-card .live-line { color: var(--text-main); }
-        .briefing-card .live-line b { color: var(--accent-color); }
-
-        /* --- Instagram-style chat --- */
-        .chat-panel {
-            display: flex;
-            flex-direction: column;
-            height: 420px;
-        }
-
-        .chat-box {
-            flex: 1;
-            overflow-y: auto;
-            padding: 14px 10px;
-            border-radius: 14px;
-            margin-bottom: 12px;
-            background: radial-gradient(circle at 20% 0%, rgba(255,75,75,0.06), transparent 40%), var(--bg-app);
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .msg-row {
-            display: flex;
-            align-items: flex-end;
-            gap: 8px;
-            max-width: 82%;
-            animation: fadeInUp 0.25s ease;
-        }
-
-        .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
-        .msg-row.assistant { align-self: flex-start; }
-
-        .msg-avatar {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
             justify-content: center;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
+            align-items: center;
         }
-
-        .msg-row.user .msg-avatar { background: var(--accent-color); }
-
-        .msg-col { display: flex; flex-direction: column; gap: 2px; }
-        .msg-row.user .msg-col { align-items: flex-end; }
-
-        .bubble {
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            line-height: 1.45;
-            word-break: break-word;
+        canvas {
+            background: #07090e;
+            border-radius: 12px;
+            border: 1px solid #2d3342;
         }
-
-        .msg-row.user .bubble {
-            background: linear-gradient(135deg, var(--accent-color), #b31212);
+        .btn {
+            background: #ff4b4b;
             color: white;
-            border-bottom-right-radius: 6px;
-        }
-
-        .msg-row.assistant .bubble {
-            background: var(--card-bg);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            border-bottom-left-radius: 6px;
-        }
-
-        .msg-time {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            padding: 0 6px;
-        }
-
-        .chat-input-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 999px;
-            padding: 6px 6px 6px 18px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .chat-input-container:focus-within {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .chat-input-container input {
-            flex: 1;
             border: none;
-            background: transparent;
-            padding: 10px 0;
-            font-size: 0.95rem;
-            color: var(--text-main);
-        }
-
-        .chat-input-container input:focus { outline: none; }
-
-        .btn-send-circle {
-            width: 42px;
-            height: 42px;
-            min-width: 42px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            border: none;
-            color: white;
-            font-size: 1.05rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.15s;
-        }
-
-        .btn-send-circle:hover { transform: scale(1.08); }
-        .btn-send-circle:active { transform: scale(0.95); }
-
-        .theme-controls-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--card-bg);
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-
-        /* --- Toasts --- */
-        #toast-container {
-            position: fixed;
-            bottom: 22px;
-            right: 22px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 9999;
-        }
-
-        @keyframes toastIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes toastOut { to { opacity: 0; transform: translateX(24px); } }
-
-        .toast {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-left: 3px solid var(--accent-color);
-            color: var(--text-main);
             padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-secondary {
+            background: #374151;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .control-group {
+            background: #1e222b;
+            padding: 12px;
             border-radius: 8px;
-            box-shadow: 0 10px 28px -6px rgba(0,0,0,0.5);
-            font-size: 0.82rem;
-            animation: toastIn 0.2s ease, toastOut 0.3s ease 2.6s forwards;
-            max-width: 280px;
+            border: 1px solid #2d3342;
         }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <h2>🚀 MarsNet-RL Control</h2>
-
-        <div class="theme-controls-bar">
-            <span style="font-size: 0.85rem;">🎨 Appearance</span>
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <input type="color" id="accent-picker" value="#ff4b4b" title="Accent Color" style="width: 28px; height: 28px; border-radius: 50%; border: none; cursor: pointer; background: transparent;">
-                <button id="theme-toggle" style="background: transparent; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; cursor: pointer; color: var(--text-main);">🌙</button>
-            </div>
+        <h2>MarsNet-RL Control</h2>
+        
+        <div class="control-group">
+            <button id="start-btn" class="btn" style="width: 100%;">Start Simulation</button>
         </div>
 
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div class="metric-title">Simulation Status</div>
-                <span class="status-badge paused" id="sim-status-badge">PAUSED</span>
-            </div>
-            <div class="btn-row" style="margin-top: 10px;">
-                <button class="action-btn primary" id="btn-start">▶ Start</button>
-                <button class="action-btn" id="btn-pause" disabled>⏸ Pause</button>
-                <button class="action-btn" id="btn-reset">⟲ Reset</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="metric-title">Cumulative RL Reward Points</div>
-            <div class="metric-value" id="rl-reward-score">0.0</div>
-        </div>
-
-        <div class="card" style="display: flex; justify-content: space-between;">
-            <div>
-                <div class="metric-title">Avoided Hazards</div>
-                <div class="metric-value" id="rl-avoidances">0</div>
-            </div>
-            <div>
-                <div class="metric-title">Collisions</div>
-                <div class="metric-value" id="rl-collisions">0</div>
-            </div>
+        <div class="control-group" style="display: flex; align-items: center; gap: 10px;">
+            <button id="btn-chaos" class="btn" style="flex-grow: 1;">Inject Space Debris</button>
+            <button id="debris-increment-btn" class="btn-secondary" style="display: none;" title="Add More Debris">▲</button>
         </div>
 
         <div class="control-group">
-            <label for="sat-slider">Number of Satellites: <span id="sat-count-val">20</span></label>
-            <input type="range" id="sat-slider" min="5" max="50" value="20">
-        </div>
-
-        <div class="info-box">Version 2.1 | Team Cassiopeia</div>
-
-        <div class="control-group">
-            <label for="debris-density-slider">Debris Density: <span id="debris-density-val">0.3</span></label>
-            <input type="range" id="debris-density-slider" min="0" max="1" step="0.1" value="0.3">
-        </div>
-
-        <div class="control-group">
-            <label><input type="checkbox" id="training-toggle" checked> Enable Training Mode (RL Active)</label>
-            <label><input type="checkbox" id="anim-toggle" checked> ▶️ Animate Satellite Orbits</label>
-        </div>
-
-        <hr style="border-color: var(--border-color);">
-
-        <div class="control-group">
-            <label for="fuel-capacity-input">Max Delta-V Budget (m/s)</label>
-            <input type="number" id="fuel-capacity-input" value="50" step="1" min="1">
-        </div>
-
-        <div class="control-group">
-            <label for="orbit-select">Debris Spawn Orbit (km altitude)</label>
-            <select id="orbit-select">
-                <option value="500">500 (LMO- )</option>
-                <option value="1000" selected>1000 (LMO)</option>
-                <option value="2500">2500</option>
-                <option value="5000">5000</option>
-            </select>
+            <h3>Metrics</h3>
+            <p>Score: <span id="score-val">1000</span></p>
+            <p>Avoidances: <span id="avoidance-val">0</span></p>
+            <p>Time Elapsed: <span id="time-val">0.0</span>s</p>
         </div>
     </div>
 
-    <div class="main-content">
-        <h1 class="app-title">🛰️ MarsNet-RL: Autonomous Orbital Routing</h1>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Objective: Maintain &gt;90% network uptime while achieving a ≥70% collision reduction rate vs. a no-RL baseline — because a ~20-minute Earth↔Mars signal delay means ground control can't react in time.</p>
-
-        <div class="metrics-row">
-            <div class="metric-card">
-                <div class="metric-title">Live Collision Risk</div>
-                <div class="metric-value" id="metric-collision-risk">0.0%</div>
-                <div class="metric-sub" id="metric-collision-sub">baseline comparison pending</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">Network Coverage</div>
-                <div class="metric-value" id="metric-network-coverage">100.0%</div>
-                <div class="metric-sub">Uptime (≥90%): <span id="metric-coverage-uptime">100.0%</span></div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">Agent Success Rate</div>
-                <div class="metric-value" id="metric-success-rate">100.0%</div>
-                <div class="metric-sub">Reactive avoidance rate</div>
-            </div>
-        </div>
-
-        <div class="metrics-row">
-            <div class="metric-card">
-                <div class="metric-title">Collision Reduction Rate (Success Measure)</div>
-                <div class="metric-value" id="metric-reduction-rate">Gathering data…</div>
-                <div class="progress-track"><div class="progress-fill" id="reduction-progress" style="width:0%; background:#94a3b8;"></div></div>
-                <div class="metric-sub">Target: ≥70% fewer collisions than a no-RL baseline fleet</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">Fleet Fuel Remaining</div>
-                <div class="metric-value" id="metric-fuel-remaining">100.0%</div>
-                <div class="metric-sub">Avg. Delta-V budget left across fleet</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-title">Predicted Conflicts</div>
-                <div class="metric-value" id="metric-predicted-conflicts">0</div>
-                <div class="metric-sub">Forecasted by the predictive congestion engine</div>
-            </div>
-        </div>
-
-        <h3>3D Martian Orbital Visualization</h3>
-        <div id="viz-container">
-            <div class="viz-hint">🖱️ Drag to rotate · Scroll to zoom · Right-drag to pan · Click a satellite to inspect</div>
-            <div class="inspector-panel" id="inspector-panel">
-                <h4><span id="inspector-title">Satellite</span><span class="close-btn" id="inspector-close">✕</span></h4>
-                <div id="inspector-body"></div>
-            </div>
-            <div class="viz-legend">
-                <span><i style="background:#00ffcc"></i>Nominal</span>
-                <span><i style="background:#ffb020"></i>Evading</span>
-                <span><i style="background:#ff8c00"></i>Predicted Conflict</span>
-                <span><i style="background:#ff3030"></i>Collision</span>
-                <span><i style="background:#808080"></i>No Fuel</span>
-                <span><i style="background:#a855f7"></i>Debris</span>
-            </div>
-        </div>
-
-        <div>
-            <button class="chaos-btn" id="btn-chaos">🚨 Inject Chaos (Space Debris)</button>
-        </div>
-
-        <div class="briefing-card">
-            <h3>📖 Mission Briefing — What This Simulation Is Doing</h3>
-            <p>MarsNet-RL demonstrates why satellite constellations orbiting Mars need to protect <em>themselves</em>: a radio signal takes up to ~20 minutes each way between Earth and Mars, so ground control physically cannot approve a collision-avoidance maneuver in time. Each satellite here is an independent reinforcement-learning agent that senses nearby debris, moons, and other satellites, uses a predictive engine to forecast conflicts before they happen, and decides — on its own, in real time — whether to thrust, hold position, or return to its assigned orbit, all while managing a limited fuel (Delta-V) budget.</p>
-            <p class="live-line" id="briefing-live">Press <b>Start</b> to begin the simulation.</p>
-        </div>
-
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('tab1')">🚀 Live Telemetry</div>
-            <div class="tab" onclick="switchTab('tab2')">🧠 RL Training Logs</div>
-            <div class="tab" onclick="switchTab('tab3')">💬 MarsNet Assistant</div>
-        </div>
-
-        <div id="tab1" class="tab-content active">
-            <p style="color: var(--text-muted);">Telemetry data active. All satellite systems operational.</p>
-        </div>
-        <div id="tab2" class="tab-content">
-            <div class="log-feed" id="training-log-feed"></div>
-        </div>
-        <div id="tab3" class="tab-content">
-            <div class="chat-panel">
-                <div class="chat-box" id="chat-box">
-                    <div class="msg-row assistant">
-                        <div class="msg-avatar">🛰️</div>
-                        <div class="msg-col">
-                            <div class="bubble">Hello! I am your MarsNet Mission Copilot. How can I help you today?</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-input-container">
-                    <input type="text" id="chat-input" placeholder="Message MarsNet Assistant...">
-                    <button class="btn-send-circle" id="btn-send" title="Send">➤</button>
-                </div>
-            </div>
-        </div>
+    <div class="main-panel">
+        <canvas id="simCanvas" width="600" height="600"></canvas>
     </div>
-
-    <div id="toast-container"></div>
 
     <script>
-        // Socket.IO connection lives here (classic script, runs immediately) so chat and controls
-        // never depend on the Three.js visualization module (loaded from a CDN) finishing/succeeding.
-        window.marsnetSocket = io();
+        const socket = io();
+        let isRunning = false;
+        let debrisEverInjected = false;
+        let currentDebris = [];
+        let satellites = [];
 
-        // --- Toast notifications ---
-        function showToast(message) {
-            const container = document.getElementById('toast-container');
-            const el = document.createElement('div');
-            el.className = 'toast';
-            el.textContent = message;
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 3000);
-        }
-        window.marsnetToast = showToast;
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
 
-        // Theme and Accent Controller Logic
-        const themeToggle = document.getElementById('theme-toggle');
-        const accentPicker = document.getElementById('accent-picker');
-        const htmlRoot = document.getElementById('html-root');
+        document.getElementById('start-btn').addEventListener('click', () => {
+            isRunning = !isRunning;
+            document.getElementById('start-btn').innerText = isRunning ? "Pause Simulation" : "Start Simulation";
+            socket.emit('toggle_simulation', { running: isRunning });
+        });
 
-        const savedTheme = localStorage.getItem('marsnet_theme') || 'dark';
-        const savedAccent = localStorage.getItem('marsnet_accent') || '#ff4b4b';
+        // 1. First click reveals the up-arrow button and sends first injection across all 4 orbits
+        document.getElementById('btn-chaos').addEventListener('click', () => {
+            debrisEverInjected = true;
+            document.getElementById('debris-increment-btn').style.display = 'inline-block';
+            socket.emit('inject_chaos');
+        });
 
-        if (savedTheme === 'light') {
-            htmlRoot.classList.remove('dark');
-            htmlRoot.classList.add('light');
-            themeToggle.innerText = '☀️';
-        } else {
-            htmlRoot.classList.add('dark');
-            htmlRoot.classList.remove('light');
-            themeToggle.innerText = '🌙';
-        }
-
-        setAccentColor(savedAccent);
-        accentPicker.value = savedAccent;
-
-        themeToggle.addEventListener('click', () => {
-            if (htmlRoot.classList.contains('dark')) {
-                htmlRoot.classList.remove('dark');
-                htmlRoot.classList.add('light');
-                themeToggle.innerText = '☀️';
-                localStorage.setItem('marsnet_theme', 'light');
-            } else {
-                htmlRoot.classList.remove('light');
-                htmlRoot.classList.add('dark');
-                themeToggle.innerText = '🌙';
-                localStorage.setItem('marsnet_theme', 'dark');
+        // 2. Up-arrow button click adds more debris across all 4 orbits
+        document.getElementById('debris-increment-btn').addEventListener('click', () => {
+            if (debrisEverInjected) {
+                socket.emit('inject_chaos');
             }
         });
 
-        accentPicker.addEventListener('input', (e) => {
-            setAccentColor(e.target.value);
-            localStorage.setItem('marsnet_accent', e.target.value);
+        socket.on('state_update', (state) => {
+            isRunning = state.running;
+            satellites = state.satellites || [];
+            document.getElementById('score-val').innerText = state.score;
+            document.getElementById('avoidance-val').innerText = state.avoidances;
+            document.getElementById('time-val').innerText = state.time_elapsed.toFixed(1);
+            document.getElementById('start-btn').innerText = isRunning ? "Pause Simulation" : "Start Simulation";
         });
 
-        function setAccentColor(hex) {
-            document.documentElement.style.setProperty('--accent-color', hex);
-        }
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-        }
-
-        // --- Instagram-style chat ---
-        const chatBox = document.getElementById('chat-box');
-        const chatInput = document.getElementById('chat-input');
-        const btnSend = document.getElementById('btn-send');
-        let chatHistory = [];
-        let currentAssistantBubble = null;
-
-        function timeNow() {
-            return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-
-        function appendMessage(role, text) {
-            const row = document.createElement('div');
-            row.className = 'msg-row ' + role;
-
-            const avatar = document.createElement('div');
-            avatar.className = 'msg-avatar';
-            avatar.textContent = role === 'user' ? '🧑‍🚀' : '🛰️';
-
-            const col = document.createElement('div');
-            col.className = 'msg-col';
-
-            const bubble = document.createElement('div');
-            bubble.className = 'bubble';
-            bubble.textContent = text;
-
-            const time = document.createElement('div');
-            time.className = 'msg-time';
-            time.textContent = timeNow();
-
-            col.appendChild(bubble);
-            col.appendChild(time);
-            row.appendChild(avatar);
-            row.appendChild(col);
-            chatBox.appendChild(row);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return bubble;
-        }
-
-        function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text) return;
-
-            appendMessage('user', text);
-            currentAssistantBubble = appendMessage('assistant', '▌');
-
-            try {
-                window.marsnetSocket.emit('send_message', { message: text, history: chatHistory });
-            } catch (err) {
-                currentAssistantBubble.textContent = "Error: could not reach the server (" + err.message + ")";
-                currentAssistantBubble = null;
-            }
-            chatHistory.push({ role: "user", content: text });
-            chatInput.value = '';
-        }
-
-        btnSend.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-
-        window.marsnetSocket.on('connect_error', (err) => {
-            if (currentAssistantBubble) {
-                currentAssistantBubble.textContent = "Error: connection to server failed (" + err.message + ")";
-                currentAssistantBubble = null;
-            }
+        socket.on('update_debris', (debrisList) => {
+            currentDebris = debrisList;
+            debrisEverInjected = true;
+            document.getElementById('debris-increment-btn').style.display = 'inline-block';
         });
-
-        window.marsnetSocket.on('chat_response_chunk', (data) => {
-            if (currentAssistantBubble) {
-                if (currentAssistantBubble.textContent === "▌") {
-                    currentAssistantBubble.textContent = "";
-                }
-                currentAssistantBubble.textContent = currentAssistantBubble.textContent.replace("▌", "") + data.chunk + "▌";
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-        });
-
-        window.marsnetSocket.on('chat_response_end', () => {
-            if (currentAssistantBubble) {
-                currentAssistantBubble.textContent = currentAssistantBubble.textContent.replace("▌", "");
-                chatHistory.push({ role: "assistant", content: currentAssistantBubble.textContent });
-                currentAssistantBubble = null;
-            }
-        });
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-
-        // --- Constants (mirrors app.py) ---
-        const R_MARS = 3389.5;
-        const R_EARTH = 1500.0;
-        const EARTH_OFFSET_X = -35000.0;
-        const R_PHOBOS = 9378.0;
-        const R_DEIMOS = 23458.0;
-        const HEO_A = 16139.5, HEO_B = 10515.6, HEO_C = 12250.0;
-
-        const STATUS_COLORS = {
-            NOMINAL: 0x00ffcc,
-            EVADING: 0xffb020,
-            PREDICTED_CONFLICT: 0xff8c00,
-            COLLISION: 0xff3030,
-            NO_FUEL: 0x808080,
-        };
-
-        const STATUS_ABBR = {
-            NOMINAL: 'OK',
-            EVADING: 'EVADE',
-            PREDICTED_CONFLICT: 'PRED',
-            COLLISION: 'HIT',
-            NO_FUEL: 'NO-FUEL',
-        };
-
-        // Reuse the single Socket.IO connection created in the classic script above,
-        // so the 3D module and the chat panel share one connection.
-        const socket = window.marsnetSocket;
-        const toast = window.marsnetToast;
-
-        socket.on('connect', () => console.log('Connected to server'));
-
-        // --- Scene setup ---
-        const container = document.getElementById('viz-container');
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000);
-
-        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 10, 400000);
-        camera.up.set(0, 0, 1);
-        camera.position.set(-10000, -68000, 16000);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
-
-        const labelRenderer = new CSS2DRenderer();
-        labelRenderer.setSize(container.clientWidth, container.clientHeight);
-        labelRenderer.domElement.style.position = 'absolute';
-        labelRenderer.domElement.style.top = '0px';
-        labelRenderer.domElement.style.left = '0px';
-        labelRenderer.domElement.style.pointerEvents = 'none';
-        container.appendChild(labelRenderer.domElement);
-
-        // IMPORTANT: controls must attach to the WebGL canvas (renderer.domElement), not the
-        // CSS2D label overlay — the label overlay has pointer-events:none and never receives
-        // mouse/wheel input, which is why camera rotate/zoom/pan previously did nothing.
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.08;
-        controls.screenSpacePanning = true;
-        controls.rotateSpeed = 0.7;
-        // Kept deliberately low: a single scroll gesture fires many wheel events (especially on
-        // trackpads), and OrbitControls multiplies distance per event — at higher zoomSpeed those
-        // compound within one gesture and jump straight to minDistance/maxDistance with no
-        // in-between feel. This keeps each individual step small so the overall zoom feels gradual.
-        controls.zoomSpeed = 0.35;
-        controls.panSpeed = 0.7;
-        controls.minDistance = 800;
-        controls.maxDistance = 220000;
-        controls.target.set(0, 0, 0);
-
-        scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-        const sunLight = new THREE.PointLight(0xffffff, 1.4, 0, 0);
-        sunLight.position.set(-90000, -90000, 70000);
-        scene.add(sunLight);
-
-        const grid = new THREE.PolarGridHelper(45000, 8, 8, 64, 0x223344, 0x223344);
-        grid.rotation.x = Math.PI / 2;
-        scene.add(grid);
-
-        // --- Starfield backdrop ---
-        (function addStarfield() {
-            const starCount = 1200;
-            const positions = new Float32Array(starCount * 3);
-            for (let i = 0; i < starCount; i++) {
-                const r = 150000 + Math.random() * 120000;
-                const theta = Math.random() * Math.PI * 2;
-                const phi = Math.acos(2 * Math.random() - 1);
-                positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-                positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-                positions[i * 3 + 2] = r * Math.cos(phi);
-            }
-            const geo = new THREE.BufferGeometry();
-            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 180, sizeAttenuation: true, transparent: true, opacity: 0.75 });
-            scene.add(new THREE.Points(geo, mat));
-        })();
-
-        function makeLabel(text, className) {
-            const div = document.createElement('div');
-            div.className = className;
-            div.textContent = text;
-            return new CSS2DObject(div);
-        }
-
-        // --- Procedural planet textures (no external image dependency, so this never
-        // breaks on a network that blocks arbitrary asset CDNs) ---
-        function mulberry32(seed) {
-            return function () {
-                let t = (seed += 0x6D2B79F5);
-                t = Math.imul(t ^ (t >>> 15), t | 1);
-                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-            };
-        }
-
-        function generatePlanetTexture({ width = 1024, height = 512, base, blobColors, blobCount, poleColor, seed = 1 }) {
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            const rand = mulberry32(seed);
-
-            ctx.fillStyle = base;
-            ctx.fillRect(0, 0, width, height);
-
-            for (let i = 0; i < blobCount; i++) {
-                const x = rand() * width;
-                const y = height * 0.12 + rand() * height * 0.76;
-                const r = 18 + rand() * 90;
-                const color = blobColors[Math.floor(rand() * blobColors.length)];
-                const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, color);
-                grad.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.globalAlpha = 0.35 + rand() * 0.35;
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.ellipse(x, y, r, r * (0.4 + rand() * 0.6), rand() * Math.PI, 0, Math.PI * 2);
-                ctx.fill();
-                // wrap around the seam so the texture tiles cleanly
-                ctx.beginPath();
-                ctx.ellipse(x - width, y, r, r * (0.4 + rand() * 0.6), 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.ellipse(x + width, y, r, r * (0.4 + rand() * 0.6), 0, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.globalAlpha = 1;
-
-            if (poleColor) {
-                const capH = height * 0.12;
-                let g = ctx.createLinearGradient(0, 0, 0, capH);
-                g.addColorStop(0, poleColor);
-                g.addColorStop(1, 'rgba(255,255,255,0)');
-                ctx.fillStyle = g;
-                ctx.fillRect(0, 0, width, capH);
-
-                g = ctx.createLinearGradient(0, height, 0, height - capH);
-                g.addColorStop(0, poleColor);
-                g.addColorStop(1, 'rgba(255,255,255,0)');
-                ctx.fillStyle = g;
-                ctx.fillRect(0, height - capH, width, capH);
-            }
-
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.colorSpace = THREE.SRGBColorSpace;
-            return tex;
-        }
-
-        function generateCloudTexture(seed = 7) {
-            const width = 1024, height = 512;
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            const rand = mulberry32(seed);
-            ctx.clearRect(0, 0, width, height);
-            for (let i = 0; i < 55; i++) {
-                const x = rand() * width, y = rand() * height, r = 30 + rand() * 110;
-                const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-                grad.addColorStop(0, 'rgba(255,255,255,0.55)');
-                grad.addColorStop(1, 'rgba(255,255,255,0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.ellipse(x, y, r, r * 0.5, rand() * Math.PI, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            return new THREE.CanvasTexture(canvas);
-        }
-
-        const marsTexture = generatePlanetTexture({
-            base: '#a8532f',
-            blobColors: ['#7c3a1e', '#c9713f', '#8a4526'],
-            blobCount: 70,
-            poleColor: '#f3ede6',
-            seed: 42,
-        });
-
-        const earthTexture = generatePlanetTexture({
-            base: '#164a7c',
-            blobColors: ['#3f7d3a', '#6b8f3f', '#8a7143', '#2f6b52'],
-            blobCount: 55,
-            poleColor: '#f5faff',
-            seed: 7,
-        });
-
-        const cloudTexture = generateCloudTexture(13);
-
-        function makePlanet(radius, texture, x = 0, { roughness = 0.9, metalness = 0.05 } = {}) {
-            const geo = new THREE.SphereGeometry(radius, 64, 48);
-            const mat = new THREE.MeshStandardMaterial({ map: texture, roughness, metalness });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(x, 0, 0);
-            return mesh;
-        }
-
-        const marsMesh = makePlanet(R_MARS, marsTexture, 0, { roughness: 1.0 });
-        const earthMesh = makePlanet(R_EARTH, earthTexture, EARTH_OFFSET_X, { roughness: 0.8, metalness: 0.1 });
-        scene.add(marsMesh, earthMesh);
-
-        const cloudMesh = new THREE.Mesh(
-            new THREE.SphereGeometry(R_EARTH * 1.02, 48, 36),
-            new THREE.MeshStandardMaterial({ map: cloudTexture, transparent: true, opacity: 0.55, depthWrite: false, roughness: 1 })
-        );
-        cloudMesh.position.set(EARTH_OFFSET_X, 0, 0);
-        scene.add(cloudMesh);
-
-        const marsLabel = makeLabel('MARS', 'label-tag');
-        marsLabel.position.set(0, 0, R_MARS + 900);
-        marsLabel.element.style.color = '#ff7f50';
-        marsMesh.add(marsLabel);
-
-        const earthLabel = makeLabel('EARTH', 'label-tag');
-        earthLabel.position.set(0, 0, R_EARTH + 900);
-        earthLabel.element.style.color = '#5cacee';
-        earthMesh.add(earthLabel);
-
-        const phobosMesh = new THREE.Mesh(new THREE.SphereGeometry(150, 16, 12), new THREE.MeshStandardMaterial({ color: 0xc8b4a0, roughness: 1 }));
-        const deimosMesh = new THREE.Mesh(new THREE.SphereGeometry(100, 16, 12), new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 1 }));
-        scene.add(phobosMesh, deimosMesh);
-
-        const phobosLabel = makeLabel('Phobos', 'label-tag');
-        phobosLabel.position.set(0, 0, 300);
-        phobosLabel.element.style.color = '#c8b4a0';
-        phobosLabel.element.style.fontSize = '10px';
-        phobosMesh.add(phobosLabel);
-
-        const deimosLabel = makeLabel('Deimos', 'label-tag');
-        deimosLabel.position.set(0, 0, 250);
-        deimosLabel.element.style.color = '#b0b0b0';
-        deimosLabel.element.style.fontSize = '10px';
-        deimosMesh.add(deimosLabel);
-
-        function makeRingGeometry(a, b = a, c = 0, segments = 128) {
-            const points = [];
-            for (let i = 0; i <= segments; i++) {
-                const t = (i / segments) * Math.PI * 2;
-                // Revert back to x and y coordinates so your orbitals stay flat and horizontal
-                points.push(new THREE.Vector3(a * Math.cos(t) + c, b * Math.sin(t), 0));
-            }
-            return new THREE.BufferGeometry().setFromPoints(points);
-        }
-
-        function addRing(geo, color, opacity, dashed = false) {
-            const mat = dashed
-                ? new THREE.LineDashedMaterial({ color, transparent: true, opacity, dashSize: 250, gapSize: 180 })
-                : new THREE.LineBasicMaterial({ color, transparent: true, opacity });
-            const line = new THREE.LineLoop(geo, mat);
-            if (dashed) line.computeLineDistances();
-            scene.add(line);
-            return line;
-        }
-
-        const r_lmo = R_MARS + 1000, r_mmo = R_MARS + 6000, r_aeo = R_MARS + 17032;
-        addRing(makeRingGeometry(r_lmo), 0xffffff, 0.35);
-        addRing(makeRingGeometry(r_mmo), 0xffffff, 0.35);
-        addRing(makeRingGeometry(r_aeo), 0xffffff, 0.35);
-        addRing(makeRingGeometry(HEO_A, HEO_B, HEO_C), 0xffffff, 0.35);
-        addRing(makeRingGeometry(R_PHOBOS), 0xc8b4a0, 0.4, true);
-        addRing(makeRingGeometry(R_DEIMOS), 0xb0b0b0, 0.4, true);
-
-        // --- Live entities (positions are lerped toward each new server tick for a smooth glide
-        // instead of a discrete 10Hz jump) ---
-        const satEntries = new Map(); // id -> {mesh, div, target, initialized}
-        let lastSatellites = [];
-
-        function ensureSatEntry(id) {
-            if (satEntries.has(id)) return satEntries.get(id);
-            const geo = new THREE.SphereGeometry(90, 16, 12);
-            const mat = new THREE.MeshStandardMaterial({ color: STATUS_COLORS.NOMINAL, emissive: 0x001a1a });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.userData.satId = id;
-            scene.add(mesh);
-
-            const div = document.createElement('div');
-            div.className = 'sat-label';
-            const label = new CSS2DObject(div);
-            label.position.set(0, 0, 220);
-            mesh.add(label);
-
-            const entry = { mesh, div, target: new THREE.Vector3(), initialized: false };
-            satEntries.set(id, entry);
-            return entry;
-        }
-
-        function updateSatellites(satellites) {
-            lastSatellites = satellites;
-            const seen = new Set();
-            satellites.forEach(sat => {
-                const entry = ensureSatEntry(sat.id);
-                
-                // Explicitly pull x, y, z from the backend socket payload
-                const targetX = Number(sat.x) || 0;
-                const targetY = Number(sat.y) || 0;
-                const targetZ = Number(sat.z) || 0;
-                
-                entry.target.set(targetX, targetY, targetZ);
-
-                if (!entry.initialized) {
-                    entry.mesh.position.copy(entry.target);
-                    entry.initialized = true;
-                }
-                entry.mesh.material.color.setHex(STATUS_COLORS[sat.status] ?? STATUS_COLORS.NOMINAL);
-                entry.div.textContent = `#${sat.id} ${STATUS_ABBR[sat.status] ?? sat.status}`;
-                seen.add(sat.id);
-            });
-            for (const [id, entry] of satEntries) {
-                if (!seen.has(id)) {
-                    scene.remove(entry.mesh);
-                    satEntries.delete(id);
-                    if (selectedSatId === id) hideInspector();
-                }
-            }
-            if (selectedSatId !== null) updateInspectorContent();
-        }
-
-        let debrisMeshes = [];
-        function updateDebris(debrisList) {
-            debrisMeshes.forEach(m => { scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
-            debrisMeshes = (debrisList || []).map(d => {
-                const geo = new THREE.SphereGeometry(75, 10, 8);
-                const mat = new THREE.MeshStandardMaterial({ color: 0xa855f7, emissive: 0x2a0a44 });
-                const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(d.x, d.y, d.z);
-                scene.add(mesh);
-                return mesh;
-            });
-        }
-
-        const MAX_PREDICTED_ZONES = 60;
-        const predictedZonePool = [];
-        for (let i = 0; i < MAX_PREDICTED_ZONES; i++) {
-            const geo = new THREE.SphereGeometry(320, 10, 10);
-            const mat = new THREE.MeshBasicMaterial({ color: 0xff2222, transparent: true, opacity: 0.22, depthWrite: false });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.visible = false;
-            scene.add(mesh);
-            predictedZonePool.push(mesh);
-        }
-
-        function updatePredictedZones(zones) {
-            const list = zones || [];
-            list.forEach((z, i) => {
-                if (i >= predictedZonePool.length) return;
-                const mesh = predictedZonePool[i];
-                mesh.position.set(z.x, z.y, z.z);
-                mesh.visible = true;
-            });
-            for (let i = list.length; i < predictedZonePool.length; i++) predictedZonePool[i].visible = false;
-        }
-
-        // --- Satellite inspector (click a satellite mesh) ---
-        const inspectorPanel = document.getElementById('inspector-panel');
-        const inspectorTitle = document.getElementById('inspector-title');
-        const inspectorBody = document.getElementById('inspector-body');
-        let selectedSatId = null;
-
-        function hideInspector() {
-            selectedSatId = null;
-            inspectorPanel.classList.remove('visible');
-        }
-
-        function updateInspectorContent() {
-            const sat = lastSatellites.find(s => s.id === selectedSatId);
-            if (!sat) { hideInspector(); return; }
-            inspectorTitle.textContent = `Satellite #${sat.id}`;
-            inspectorBody.innerHTML = `
-                <div class="inspector-row"><span>Regime</span><span>${sat.regime}</span></div>
-                <div class="inspector-row"><span>Status</span><span>${sat.status}</span></div>
-                <div class="inspector-row"><span>Last Action</span><span>${['Hold','Thrust Out','Thrust In','Recover'][sat.last_action] ?? sat.last_action}</span></div>
-                <div class="inspector-row"><span>Orbit Offset</span><span>${sat.radial_offset.toFixed(1)} km</span></div>
-                <div class="inspector-row"><span>Fuel Used</span><span>${sat.fuel_used.toFixed(2)} m/s</span></div>
-                <div class="inspector-row"><span>Predicted Conflict</span><span>${sat.predicted_conflict ? 'YES' : 'no'}</span></div>
-            `;
-            inspectorPanel.classList.add('visible');
-        }
-
-        document.getElementById('inspector-close').addEventListener('click', hideInspector);
-
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-        let dragDistance = 0;
-
-        renderer.domElement.addEventListener('pointerdown', () => { dragDistance = 0; });
-        renderer.domElement.addEventListener('pointermove', (e) => { dragDistance += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0); });
-
-        renderer.domElement.addEventListener('click', (event) => {
-            if (dragDistance > 6) return; // ignore clicks that were actually camera drags
-            const rect = renderer.domElement.getBoundingClientRect();
-            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-            raycaster.setFromCamera(pointer, camera);
-            const meshes = Array.from(satEntries.values()).map(e => e.mesh);
-            const hits = raycaster.intersectObjects(meshes);
-            if (hits.length > 0) {
-                selectedSatId = hits[0].object.userData.satId;
-                updateInspectorContent();
-            }
-        });
-
-        // --- Moon + planet self-rotation animation (matches server's angle formulas exactly for moons) ---
-        let animate = true;
-        document.getElementById('anim-toggle').addEventListener('change', (e) => { animate = e.target.checked; });
-
-        function updateMoons() {
-            const elapsed = Date.now() / 1000.0;
-            const anglePhobos = (elapsed * 0.6) % (2 * Math.PI);
-            const angleDeimos = (elapsed * 0.15 + 1.5) % (2 * Math.PI);
-            phobosMesh.position.set(R_PHOBOS * Math.cos(anglePhobos), R_PHOBOS * Math.sin(anglePhobos), 0);
-            deimosMesh.position.set(R_DEIMOS * Math.cos(angleDeimos), R_DEIMOS * Math.sin(angleDeimos), 0);
-        }
 
         function renderLoop() {
-            requestAnimationFrame(renderLoop);
-            if (animate) {
-                updateMoons();
-                marsMesh.rotation.z += 0.0009;
-                earthMesh.rotation.z += 0.0013;
-                cloudMesh.rotation.z += 0.0021;
-                for (const entry of satEntries.values()) {
-                    entry.mesh.position.lerp(entry.target, 0.22);
-                }
-            }
-            controls.update();
-            renderer.render(scene, camera);
-            labelRenderer.render(scene, camera);
-        }
-        renderLoop();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
 
-        function onResize() {
-            const w = container.clientWidth, h = container.clientHeight;
-            if (w === 0 || h === 0) return;
-            camera.aspect = w / h;
-            camera.updateProjectionMatrix();
-            renderer.setSize(w, h);
-            labelRenderer.setSize(w, h);
-        }
-        new ResizeObserver(onResize).observe(container);
-        window.addEventListener('resize', onResize);
+            // Draw Mars center planet body
+            ctx.fillStyle = '#c1440e';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 30, 0, 2 * Math.PI);
+            ctx.fill();
 
-        // --- Socket event wiring ---
-        socket.on('init_state', (data) => {
-            if (data.satellites) updateSatellites(data.satellites);
-            if (data.debris) updateDebris(data.debris);
-            if (typeof data.running === 'boolean') setRunningState(data.running);
-            if (typeof data.debris_density === 'number') {
-                debrisSlider.value = data.debris_density;
-                debrisVal.innerText = data.debris_density;
-            }
-            if (typeof data.training_mode === 'boolean') trainingToggle.checked = data.training_mode;
-            if (typeof data.fuel_capacity === 'number') fuelCapacityInput.value = data.fuel_capacity;
-        });
-
-        socket.on('satellites_updated', (data) => { updateSatellites(data.satellites); });
-        socket.on('debris_updated', (data) => { updateDebris(data.debris); });
-        socket.on('simulation_status', (data) => { setRunningState(data.running); });
-
-        const prevStatusById = new Map();
-        const briefingLine = document.getElementById('briefing-live');
-
-        socket.on('telemetry_update', (data) => {
-            setText('rl-reward-score', fmt1(data.total_reward, 0));
-            setText('rl-avoidances', data.avoidances ?? 0);
-            setText('rl-collisions', data.collisions ?? 0);
-            setText('metric-collision-risk', fmt1(data.collision_risk, 0) + '%');
-            setText('metric-network-coverage', fmt1(data.network_coverage, 100) + '%');
-            setText('metric-coverage-uptime', fmt1(data.coverage_uptime_pct, 100) + '%');
-            setText('metric-success-rate', fmt1(data.success_rate, 100) + '%');
-            setText('metric-fuel-remaining', fmt1(data.fleet_avg_fuel_remaining_pct, 100) + '%');
-            setText('metric-predicted-conflicts', data.predicted_conflicts_count ?? 0);
-
-            const reductionEl = document.getElementById('metric-reduction-rate');
-            const reductionBar = document.getElementById('reduction-progress');
-            const subEl = document.getElementById('metric-collision-sub');
-            let reductionText = 'Gathering data…';
-            if (data.collision_reduction_rate === null || data.collision_reduction_rate === undefined) {
-                reductionEl.innerText = 'Gathering data…';
-                reductionBar.style.width = '0%';
-                reductionBar.style.background = '#94a3b8';
-                subEl.innerText = 'baseline comparison pending';
-            } else {
-                const rate = data.collision_reduction_rate;
-                reductionText = rate.toFixed(1) + '%';
-                reductionEl.innerText = reductionText;
-                const pct = Math.max(0, Math.min(100, rate));
-                reductionBar.style.width = pct + '%';
-                reductionBar.style.background = rate >= 70 ? '#22c55e' : '#f59e0b';
-                subEl.innerText = `RL: ${data.collisions} vs baseline: ${data.baseline_collisions}`;
-            }
-
-            if (data.satellites) {
-                updateSatellites(data.satellites);
-                logStatusChanges(data.satellites);
-            }
-            if (data.predicted_zones) updatePredictedZones(data.predicted_zones);
-
-            updateBriefing(data, reductionText);
-        });
-
-        function updateBriefing(data, reductionText) {
-            const evading = (data.satellites || []).filter(s => s.status === 'EVADING').length;
-            const predicted = data.predicted_conflicts_count ?? 0;
-            const noFuel = (data.satellites || []).filter(s => s.status === 'NO_FUEL').length;
-            const parts = [];
-            parts.push(`Fleet of <b>${(data.satellites || []).length}</b> satellites is <b>${evading > 0 ? evading + ' evading' : 'nominal'}</b>.`);
-            if (predicted > 0) parts.push(`Predictive engine is tracking <b>${predicted}</b> forecasted conflict${predicted === 1 ? '' : 's'} before they become reactive threats.`);
-            if (noFuel > 0) parts.push(`<b>${noFuel}</b> satellite${noFuel === 1 ? ' has' : 's have'} exhausted ${noFuel === 1 ? 'its' : 'their'} Delta-V budget and can no longer maneuver.`);
-            parts.push(`Collision reduction vs. the no-RL baseline is currently <b>${reductionText}</b> (target ≥70%).`);
-            briefingLine.innerHTML = parts.join(' ');
-        }
-
-        function fmt1(val, fallback) {
-            const v = (val === undefined || val === null) ? fallback : val;
-            return Number(v).toFixed(1);
-        }
-
-        function setText(id, text) {
-            const el = document.getElementById(id);
-            if (el) el.innerText = text;
-        }
-
-        // --- RL Training Log feed ---
-        const logFeed = document.getElementById('training-log-feed');
-        function pushLog(message, cls) {
-            const line = document.createElement('div');
-            line.className = 'log-line' + (cls ? ' ' + cls : '');
-            const t = new Date().toLocaleTimeString();
-            line.textContent = `[${t}] ${message}`;
-            logFeed.prepend(line);
-            while (logFeed.children.length > 60) logFeed.removeChild(logFeed.lastChild);
-        }
-
-        function logStatusChanges(satellites) {
-            satellites.forEach(sat => {
-                const prev = prevStatusById.get(sat.id);
-                if (prev !== sat.status) {
-                    if (sat.status === 'EVADING') pushLog(`Sat ${sat.id} (${sat.regime}) entered EVADING — action ${sat.last_action}`, 'evade');
-                    else if (sat.status === 'COLLISION') pushLog(`Sat ${sat.id} (${sat.regime}) COLLISION detected`, 'collision');
-                    else if (sat.status === 'PREDICTED_CONFLICT') pushLog(`Sat ${sat.id} (${sat.regime}) predictive engine forecasts a conflict ahead`, 'predicted');
-                    else if (sat.status === 'NO_FUEL') pushLog(`Sat ${sat.id} (${sat.regime}) exhausted its Delta-V budget`, 'fuel');
-                    else if (prev !== undefined) pushLog(`Sat ${sat.id} (${sat.regime}) returned to NOMINAL`);
-                    prevStatusById.set(sat.id, sat.status);
-                }
+            // Draw all 4 orbital shell tracks as guides (matching radii: 80, 140, 200, 260)
+            const shellRadii = [80, 140, 200, 260];
+            ctx.strokeStyle = '#1f293d';
+            ctx.lineWidth = 1.5;
+            shellRadii.forEach(r => {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.stroke();
             });
+
+            // Draw Satellites
+            satellites.forEach(sat => {
+                const sx = cx + sat.x;
+                const sy = cy + sat.y;
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 3.5, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw Purple Debris Orbs across all orbitals only if injected
+            if (debrisEverInjected) {
+                currentDebris.forEach(deb => {
+                    const dx = cx + deb.radius * Math.cos(deb.angle);
+                    const dy = cy + deb.radius * Math.sin(deb.angle);
+
+                    ctx.fillStyle = '#a855f7'; // Purple space debris
+                    ctx.shadowColor = '#a855f7';
+                    ctx.shadowBlur = 8;
+                    ctx.beginPath();
+                    ctx.arc(dx, dy, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.shadowBlur = 0; // reset
+                });
+            }
+
+            requestAnimationFrame(renderLoop);
         }
 
-        // --- Lifecycle & control wiring ---
-        const statusBadge = document.getElementById('sim-status-badge');
-        const btnStart = document.getElementById('btn-start');
-        const btnPause = document.getElementById('btn-pause');
-
-        function setRunningState(running) {
-            statusBadge.classList.toggle('running', !!running);
-            statusBadge.classList.toggle('paused', !running);
-            statusBadge.innerText = running ? 'RUNNING' : 'PAUSED';
-            btnStart.disabled = !!running;
-            btnPause.disabled = !running;
-        }
-
-        btnStart.addEventListener('click', () => {
-            socket.emit('start_simulation');
-            setRunningState(true);
-            toast('Simulation started');
-        });
-        btnPause.addEventListener('click', () => {
-            socket.emit('pause_simulation');
-            setRunningState(false);
-            toast('Simulation paused');
-        });
-        document.getElementById('btn-reset').addEventListener('click', () => {
-            socket.emit('reset_simulation');
-            prevStatusById.clear();
-            logFeed.innerHTML = '';
-            hideInspector();
-            pushLog('Simulation reset — RL agent retains its learned Q-table.');
-            toast('Simulation reset');
-        });
-
-        const satSlider = document.getElementById('sat-slider');
-        const satVal = document.getElementById('sat-count-val');
-        satSlider.addEventListener('input', (e) => {
-            satVal.innerText = e.target.value;
-            socket.emit('update_satellites', { count: e.target.value });
-        });
-        satSlider.addEventListener('change', () => toast(`Fleet resized to ${satSlider.value} satellites`));
-
-        const debrisSlider = document.getElementById('debris-density-slider');
-        const debrisVal = document.getElementById('debris-density-val');
-        debrisSlider.addEventListener('input', (e) => {
-            debrisVal.innerText = e.target.value;
-            socket.emit('update_debris_density', { density: parseFloat(e.target.value) });
-        });
-
-        const trainingToggle = document.getElementById('training-toggle');
-        trainingToggle.addEventListener('change', (e) => {
-            socket.emit('toggle_training_mode', { enabled: e.target.checked });
-            toast(e.target.checked ? 'RL training mode enabled' : 'RL training mode disabled — flying naive baseline policy');
-        });
-
-        const fuelCapacityInput = document.getElementById('fuel-capacity-input');
-        fuelCapacityInput.addEventListener('change', (e) => {
-            socket.emit('update_fuel_capacity', { capacity: parseFloat(e.target.value) });
-            toast(`Delta-V budget set to ${e.target.value} m/s`);
-        });
-
-        const orbitSelect = document.getElementById('orbit-select');
-        orbitSelect.addEventListener('change', (e) => {
-            socket.emit('update_target_orbit', { altitude: parseFloat(e.target.value) });
-        });
-
-        document.getElementById('btn-chaos').addEventListener('click', () => {
-            socket.emit('inject_chaos');
-            toast('🚨 Debris injected into orbit');
-        });
+        renderLoop();
     </script>
 </body>
 </html>

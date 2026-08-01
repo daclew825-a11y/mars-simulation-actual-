@@ -9,6 +9,7 @@ try:
 except ImportError:
     pass  # eventlet isn't installed locally (e.g. plain `python app.py` dev runs); harmless to skip
 
+
 import os
 import time
 import math
@@ -21,26 +22,33 @@ from flask import Flask, send_file
 from flask_socketio import SocketIO, emit
 from groq import Groq
 
+
 load_dotenv()
+
 
 # Base directory setup
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
 app = Flask(__name__, static_folder=".", template_folder=".")
 app.config["SECRET_KEY"] = "marsnet_secret_key_2026"
 socketio = SocketIO(app, cors_allowed_origins="*")
+
 
 # --- Physical Constants ---
 R_MARS = 3389.5
 R_EARTH = 1500.0
 EARTH_OFFSET_X = -35000.0
 
+
 # Moons Orbit Radii (from Mars center)
 R_PHOBOS = 9378.0   # ~5,989 km altitude
 R_DEIMOS = 23458.0  # ~20,068 km altitude
 
+
 # HEO ellipse parameters (matches frontend orbit ring geometry)
 HEO_A, HEO_B, HEO_C = 16139.5, 10515.6, 12250.0
+
 
 # --- Astrodynamics: Kepler's Third Law (ω ∝ r^-1.5) drives relative orbital speed ---
 REF_RADIUS = R_MARS + 1000.0  # Low Mars Orbit altitude, used as the reference orbit
@@ -48,21 +56,26 @@ BASE_ANGULAR_SPEED = 1.1      # demo-timescale pace for the reference (LMO) orbi
 ANGLE_STEP_COEF = 0.015       # rad per simulation tick, per unit of "speed"
 TICK_DT = 0.1                 # seconds of wall-clock time per simulation tick (10 Hz)
 
+
 def kepler_relative_speed(radius_km):
     """Physically-consistent relative angular speed: closer orbits move faster (Kepler's 3rd law)."""
     return BASE_ANGULAR_SPEED * (REF_RADIUS / radius_km) ** 1.5
+
 
 # --- Predictive Congestion Engine tuning ---
 PREDICT_TICKS = [3, 6, 9, 12, 15, 18]       # lookahead samples (up to 1.8 sim-seconds ahead)
 PREDICTIVE_WARNING_DISTANCE = 1800.0        # km; larger than the reactive SAFE_DISTANCE so it fires earlier
 NEARBY_PREFILTER_DISTANCE = 3000.0          # km; coarse current-distance filter before forecasting vs. other satellites
 
+
 # --- Fuel / Delta-V tuning ---
 DELTA_V_PER_MANEUVER = 0.5   # m/s consumed per dodge action
 FUEL_COST_WEIGHT = 0.05      # reward penalty per m/s of delta-v spent (discourages needless thrusting)
 DEFAULT_FUEL_CAPACITY = 50.0 # m/s mission budget per satellite
 
+
 MAX_DEBRIS_COUNT = 30
+
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", None)
 client = None
@@ -72,9 +85,11 @@ if GROQ_API_KEY:
     except Exception as e:
         print(f"Failed to initialize Groq Client: {e}")
 
+
 #--- Reinforcement Learning Agent ---
 class SatelliteRLAgent:
     """Q-Learning Agent for Autonomous Satellite Collision Avoidance & Trajectory Recovery.
+
 
     State = (dist_bin, offset_bin, predicted_bin):
       dist_bin:      0 = reactive danger (<300km), 1 = reactive warning (<1200km), 2 = clear
@@ -87,17 +102,21 @@ class SatelliteRLAgent:
         self.epsilon = epsilon # Exploration rate
         self.q_table = {} # State action Q-values
 
+
         for d in [0, 1]: # Reactive danger zones (dist_bin 0 or 1)
             for o in [0, 1]:
                 for p in [0, 1]:
                     #strongly favor action 1 or 2 (radial thrust dodge)
                     self.q_table[(d, o, p)] = np.array([0.0, 15.0, 15.0, -5.0])
 
+
         for o in [0, 1]: # safe zone (dist_bin 2), but predictive engine sees a conflict incoming
             self.q_table[(2, o, 0)] = np.array([2.0, 8.0, 8.0, 0.0])  # mild preemptive dodge favored
 
+
         for o in [0, 1]: # fully clear, nothing forecasted
             self.q_table[(2, o, 1)] = np.array([5.0, 0.0, 0.0, 5.0]) # favor maintaining/recovering orbit
+
 
     def get_state_key(self, min_dist, radial_offset, predicted_conflict):
         """Discretizes raw sensor distance, altitude offset & forecast into discrete states."""
@@ -108,36 +127,44 @@ class SatelliteRLAgent:
         else:
             dist_bin = 2
 
+
         offset_bin = 0 if abs(radial_offset) >= 100 else 1
         predicted_bin = 0 if predicted_conflict else 1
         return (dist_bin, offset_bin, predicted_bin)
+
 
     def choose_action(self, state_key):
         '''Epsilon-greedy policy for action selection.'''
         if state_key not in self.q_table:
             self.q_table[state_key] = np.zeros(4)
 
+
         if np.random.uniform(0, 1) < self.epsilon:
             return int(np.random.randint(0, 4))
         else:
             return int(np.argmax(self.q_table[state_key]))
+
 
     def update(self, state_key, action, reward, next_state_key):
         '''Q-learning Bellman update equation.'''
         if next_state_key not in self.q_table:
             self.q_table[next_state_key] = np.zeros(4)
 
+
         predict = self.q_table[state_key][action]
         target = reward + self.gamma * np.max(self.q_table[next_state_key])
         self.q_table[state_key][action] += self.alpha * (target - predict)
 
+
 rl_agent = SatelliteRLAgent()
+
 
 REGIME_ALTITUDES = {
     'LMO': 1000,
     'MMO': 6000,
     'AEO': 17032,
 }
+
 
 def init_satellites(num_sats):
     """Generates initial orbit states and 3D positions for satellites, using Kepler-consistent speeds."""
@@ -146,10 +173,12 @@ def init_satellites(num_sats):
     base_angles = np.random.uniform(0, 2 * np.pi, size=num_sats)
     jitter = np.random.uniform(0.85, 1.15, size=num_sats)
 
+
     sats = []
     for i in range(num_sats):
         regime = regimes[i]
         angle = float(base_angles[i])
+
 
         if regime == 'HEO':
             radius = HEO_A
@@ -161,8 +190,10 @@ def init_satellites(num_sats):
             x = float(radius * np.cos(angle))
             y = float(radius * np.sin(angle))
 
+
         speed = float(kepler_relative_speed(radius) * jitter[i])
         z = 0.0 # Pins satellites flat on the equatorial orbital plane
+
 
         sats.append({
             "id": i + 1,
@@ -182,6 +213,7 @@ def init_satellites(num_sats):
         })
     return sats
 
+
 simulation_state = {
     "satellites": [],
     "debris": [],
@@ -193,12 +225,15 @@ simulation_state = {
     "fuel_capacity": DEFAULT_FUEL_CAPACITY,
 }
 
+
 baseline_state = {
     "satellites": [],
 }
 
+
 simulation_state["satellites"] = init_satellites(simulation_state["num_satellites"])
 baseline_state["satellites"] = init_satellites(simulation_state["num_satellites"])
+
 
 # --- RL Avoidance Tracking Metrics ---
 telemetry_data = {
@@ -208,7 +243,10 @@ telemetry_data = {
     "baseline_collisions": 0,
 }
 
+
 coverage_history = deque(maxlen=1800)  # ~180s rolling window at 10Hz
+
+
 
 
 def get_moon_positions(elapsed):
@@ -219,6 +257,8 @@ def get_moon_positions(elapsed):
         (float(R_PHOBOS * math.cos(angle_phobos)), float(R_PHOBOS * math.sin(angle_phobos)), 0.0),
         (float(R_DEIMOS * math.cos(angle_deimos)), float(R_DEIMOS * math.sin(angle_deimos)), 0.0),
     ]
+
+
 
 
 def project_satellite_position(sat, ticks_ahead):
@@ -235,6 +275,8 @@ def project_satellite_position(sat, ticks_ahead):
     return x, y, 0.0
 
 
+
+
 def predict_conflicts(sat, other_sats, debris_list, elapsed_now):
     """Forecasts whether `sat` is on course to intersect a hazard within the prediction horizon."""
     nearby_sats = [
@@ -243,16 +285,20 @@ def predict_conflicts(sat, other_sats, debris_list, elapsed_now):
         (sat["x"] - o["x"]) ** 2 + (sat["y"] - o["y"]) ** 2 + (sat["z"] - o["z"]) ** 2 < NEARBY_PREFILTER_DISTANCE ** 2
     ]
 
+
     closest_dist = float("inf")
     closest_point = None
+
 
     for k in PREDICT_TICKS:
         px, py, pz = project_satellite_position(sat, k)
         future_elapsed = elapsed_now + k * TICK_DT
 
+
         hazards = [(d["x"], d["y"], d["z"]) for d in debris_list]
         hazards.extend(get_moon_positions(future_elapsed))
         hazards.extend(project_satellite_position(o, k) for o in nearby_sats)
+
 
         for hx, hy, hz in hazards:
             dist = math.sqrt((px - hx) ** 2 + (py - hy) ** 2 + (pz - hz) ** 2)
@@ -260,8 +306,11 @@ def predict_conflicts(sat, other_sats, debris_list, elapsed_now):
                 closest_dist = dist
                 closest_point = ((px + hx) / 2.0, (py + hy) / 2.0, (pz + hz) / 2.0)
 
+
     predicted_conflict = closest_dist < PREDICTIVE_WARNING_DISTANCE
     return predicted_conflict, closest_dist, closest_point
+
+
 
 
 def run_simulation_step():
@@ -273,17 +322,22 @@ def run_simulation_step():
     """
     global simulation_state, telemetry_data
 
+
     SAFE_DISTANCE = 1200.0 # Warning radius to trigger avoidance check (km)
     COLLISION_DISTANCE = 250.0 # Impact radius (km)
+
 
     elapsed = time.time()
     moons = [{"x": mx, "y": my, "z": mz} for mx, my, mz in get_moon_positions(elapsed)]
 
+
     predicted_zones = []
+
 
     for sat in simulation_state["satellites"]:
         #1. Update satellite position along orbital path
         sat["angle"] += sat["speed"] * ANGLE_STEP_COEF
+
 
         if sat["regime"] == 'HEO':
             offset = sat["radial_offset"]
@@ -294,8 +348,10 @@ def run_simulation_step():
             sat["x"] = float(current_radius * np.cos(sat["angle"]))
             sat["y"] = float(current_radius * np.sin(sat["angle"]))
 
+
         #2. Measure distance to closest hazard (space debris object, moons, or other satellites)
         min_dist = 999999.0
+
 
         for debris in simulation_state["debris"]:
             dist = math.sqrt(
@@ -306,6 +362,7 @@ def run_simulation_step():
             if dist < min_dist:
                 min_dist = dist
 
+
         for moon in moons:
             dist = math.sqrt(
                 (sat["x"] - moon["x"]) ** 2 +
@@ -314,6 +371,7 @@ def run_simulation_step():
             )
             if dist < min_dist:
                 min_dist = dist
+
 
         for other_sat in simulation_state["satellites"]:
             if other_sat["id"] != sat["id"]:
@@ -325,6 +383,7 @@ def run_simulation_step():
                 if dist < 400.0 and dist < min_dist:
                     min_dist = dist
 
+
         #3. Predictive Congestion Engine: forecast conflicts before they become reactive threats
         predicted_conflict, _, predicted_point = predict_conflicts(
             sat, simulation_state["satellites"], simulation_state["debris"], elapsed
@@ -333,12 +392,15 @@ def run_simulation_step():
         if predicted_conflict and predicted_point:
             predicted_zones.append({"x": predicted_point[0], "y": predicted_point[1], "z": predicted_point[2]})
 
+
         #4. RL Agent State & Action Selection
         remaining_fuel = simulation_state["fuel_capacity"] - sat["fuel_used"]
         out_of_fuel = remaining_fuel < DELTA_V_PER_MANEUVER
 
+
         # State captured BEFORE the action is applied (radial_offset still pre-maneuver)
         state_key = rl_agent.get_state_key(min_dist, sat["radial_offset"], predicted_conflict)
+
 
         if not simulation_state["training_mode"]:
             # Training mode off: fleet flies the naive baseline policy for live A/B comparison
@@ -350,16 +412,20 @@ def run_simulation_step():
         else:
             action = rl_agent.choose_action(state_key)
 
+
         if action in (1, 2) and out_of_fuel:
             action = 0 # No fuel left for a maneuver; fall back to holding position
 
+
         sat["last_action"] = action
+
 
         # Action 0: Maintain orbit
         # Action 1: Radial thrust outward (+25 km altitude)
         # Action 2: Radial thrust inward (-25 km altitude)
         # Action 3: Restore nominal orbit altitude
         reward = 0.1 # Routine orbit reward
+
 
         if action == 1: # Dodge outward
             sat["radial_offset"] += 25.0
@@ -377,12 +443,14 @@ def run_simulation_step():
                 sat["radial_offset"] = 0.0
                 sat["in_evasion_mode"] = False
 
+
         #if the satellite is actively evading or facing a collision threat, let it push out far (up to 800 km).
         # otherwise gently pull it back and lock it tightly to its designated orbit ring (+- 100 km)
         if sat["status"] in ["EVADING", "COLLISION"]:
             sat["radial_offset"] = max(-800.0, min(800.0, sat["radial_offset"]))
         else:
             sat["radial_offset"] = max(-100.0, min(100.0, sat["radial_offset"]))
+
 
         #5. Collision vs Avoidance Evaluation & rewards
         if min_dist < COLLISION_DISTANCE:
@@ -407,12 +475,14 @@ def run_simulation_step():
             sat["status"] = "NOMINAL"
             sat["in_evasion_mode"] = False
 
+
         # Target Goal Shaping: Enforce 99% avoidance success shaping reward
         total_encounters = telemetry_data["avoidances"] + telemetry_data["collisions"]
         if total_encounters > 0:
             current_avoidance_rate = telemetry_data["avoidances"] / total_encounters
             if current_avoidance_rate < 0.99:
                 reward -= 3.0 # Penalty if agent falls below the 99% avoidance target
+
 
         #6. Update RL Agent Q-table (skipped while training mode is off)
         if simulation_state["training_mode"]:
@@ -421,7 +491,9 @@ def run_simulation_step():
             rl_agent.update(state_key, action, reward, next_state_key)
         telemetry_data["total_reward"] += reward
 
+
     simulation_state["predicted_zones"] = predicted_zones
+
 
     #--- Baseline (no-avoidance) shadow fleet: measures the RL agent's collision reduction rate ---
     for bsat in baseline_state["satellites"]:
@@ -432,6 +504,7 @@ def run_simulation_step():
         else:
             bsat["x"] = float(bsat["radius"] * np.cos(bsat["angle"]))
             bsat["y"] = float(bsat["radius"] * np.sin(bsat["angle"]))
+
 
         min_dist = 999999.0
         for debris in simulation_state["debris"]:
@@ -454,8 +527,11 @@ def run_simulation_step():
                 if dist < 400.0 and dist < min_dist:
                     min_dist = dist
 
+
         if min_dist < COLLISION_DISTANCE:
             telemetry_data["baseline_collisions"] += 1
+
+
 
 
 def background_simulation_loop():
@@ -465,17 +541,21 @@ def background_simulation_loop():
     while True:
         socketio.sleep(TICK_DT)
 
+
         try:
             if not simulation_state["running"]:
                 continue
+
 
             # Debris density slider: probabilistically auto-spawns debris while the sim runs
             density = simulation_state["debris_density"]
             if density > 0 and np.random.random() < density * 0.02:
                 spawn_debris()
 
+
             run_simulation_step()
             _emit_telemetry()
+
 
             tick_count += 1
             if tick_count % 100 == 0:  # heartbeat roughly every 10s at 10Hz, so Render logs prove it's alive
@@ -490,26 +570,33 @@ def background_simulation_loop():
             traceback.print_exc()
 
 
+
+
 def _emit_telemetry():
     total_encounters = telemetry_data["avoidances"] + telemetry_data["collisions"]
     success_rate = (telemetry_data["avoidances"] / total_encounters * 100.0) if total_encounters > 0 else 100.0
+
 
     active_functional_sats = sum(1 for s in simulation_state["satellites"] if s["status"] in ["NOMINAL", "EVADING", "PREDICTED_CONFLICT"])
     total_sats = len(simulation_state["satellites"])
     network_coverage = (active_functional_sats / total_sats * 100.0) if total_sats else 100.0
 
+
     active_threats = sum(1 for s in simulation_state["satellites"] if s["status"] == "COLLISION")
     collision_risk = min(100.0, (active_threats / max(1, total_sats)) * 100.0)
     life_risk = collision_risk * 0.5
 
+
     coverage_history.append(1 if network_coverage >= 90.0 else 0)
     coverage_uptime_pct = (sum(coverage_history) / len(coverage_history) * 100.0) if coverage_history else 100.0
+
 
     rl_collisions = telemetry_data["collisions"]
     baseline_collisions = telemetry_data["baseline_collisions"]
     collision_reduction_rate = (
         (1 - rl_collisions / baseline_collisions) * 100.0 if baseline_collisions > 0 else None
     )
+
 
     fuel_capacity = simulation_state["fuel_capacity"]
     if total_sats:
@@ -519,7 +606,9 @@ def _emit_telemetry():
     else:
         avg_fuel_remaining_pct = 100.0
 
+
     predicted_conflicts_count = sum(1 for s in simulation_state["satellites"] if s["predicted_conflict"])
+
 
     socketio.emit("telemetry_update", {
         "total_reward": round(telemetry_data["total_reward"], 1),
@@ -539,11 +628,14 @@ def _emit_telemetry():
     })
 
 
+
+
 def spawn_debris():
     # At capacity, retire the oldest debris instead of silently refusing — keeps the
     # "Inject Chaos" button (and density-driven auto-spawn) always visibly responsive.
     if len(simulation_state["debris"]) >= MAX_DEBRIS_COUNT:
         simulation_state["debris"].pop(0)
+
 
     r_orbit = R_MARS + simulation_state["orbit_altitude"]
     angle = np.random.uniform(0, 2 * np.pi)
@@ -554,6 +646,8 @@ def spawn_debris():
     }
     simulation_state["debris"].append(debris_item)
     socketio.emit("debris_updated", {"count": len(simulation_state["debris"]), "debris": simulation_state["debris"]})
+
+
 
 
 def reset_all_state():
@@ -570,16 +664,20 @@ def reset_all_state():
     coverage_history.clear()
 
 
+
+
 # --- Web Routes ---
 @app.route("/")
 def serve_landing():
     """Serves the landing page with an explicit path."""
     return send_file(os.path.join(BASE_DIR, "landing.html"))
 
+
 @app.route("/app")
 def serve_dashboard():
     """Serves the 3D MarsNet-RL simulation dashboard with an explicit path."""
     return send_file(os.path.join(BASE_DIR, "index.html"))
+
 
 # --- Socket.IO Events ---
 @socketio.on("connect")
@@ -595,6 +693,7 @@ def handle_connect():
         "fuel_capacity": simulation_state["fuel_capacity"],
     })
 
+
 @socketio.on("update_satellites")
 def handle_update_satellites(data):
     num_sats = int(data.get("count", 20))
@@ -603,13 +702,16 @@ def handle_update_satellites(data):
     baseline_state["satellites"] = init_satellites(num_sats)
     emit("satellites_updated", {"satellites": simulation_state["satellites"]}, broadcast=True)
 
+
 @socketio.on("inject_chaos")
 def handle_inject_chaos():
     spawn_debris()
 
+
 @socketio.on("update_target_orbit")
 def handle_update_target_orbit(data):
     simulation_state["orbit_altitude"] = max(200.0, float(data.get("altitude", 1000)))
+
 
 @socketio.on("start_simulation")
 def handle_start_simulation():
@@ -617,11 +719,13 @@ def handle_start_simulation():
     print("[MarsNet] start_simulation received - running=True", flush=True)
     emit("simulation_status", {"running": True}, broadcast=True)
 
+
 @socketio.on("pause_simulation")
 def handle_pause_simulation():
     simulation_state["running"] = False
     print("[MarsNet] pause_simulation received - running=False", flush=True)
     emit("simulation_status", {"running": False}, broadcast=True)
+
 
 @socketio.on("reset_simulation")
 def handle_reset_simulation():
@@ -638,27 +742,33 @@ def handle_reset_simulation():
         "fuel_capacity": simulation_state["fuel_capacity"],
     }, broadcast=True)
 
+
 @socketio.on("update_debris_density")
 def handle_update_debris_density(data):
     simulation_state["debris_density"] = max(0.0, min(1.0, float(data.get("density", 0.3))))
+
 
 @socketio.on("toggle_training_mode")
 def handle_toggle_training_mode(data):
     simulation_state["training_mode"] = bool(data.get("enabled", True))
 
+
 @socketio.on("update_fuel_capacity")
 def handle_update_fuel_capacity(data):
     simulation_state["fuel_capacity"] = max(1.0, float(data.get("capacity", DEFAULT_FUEL_CAPACITY)))
+
 
 @socketio.on("send_message")
 def handle_chat_message(data):
     user_message = data.get("message", "")
     history = data.get("history", [])
 
+
     if not client:
         emit("chat_response_chunk", {"chunk": "Error: Groq API key is missing."})
         emit("chat_response_end")
         return
+
 
     total_encounters = telemetry_data["avoidances"] + telemetry_data["collisions"]
     reduction = (
@@ -679,6 +789,7 @@ def handle_chat_message(data):
         f"- Fuel budget per satellite: {simulation_state['fuel_capacity']:.1f} m/s Delta-V.\n"
     )
 
+
     messages = [{
         "role": "system",
         "content": (
@@ -690,6 +801,7 @@ def handle_chat_message(data):
             "fabricating scenario details.\n\n" + live_context
         )
     }] + history + [{"role": "user", "content": user_message}]
+
 
     try:
         completion = client.chat.completions.create(
@@ -706,16 +818,24 @@ def handle_chat_message(data):
         emit("chat_response_chunk", {"chunk": f"Error: {str(e)}"})
         emit("chat_response_end")
 
+
 threading.Thread(target=background_simulation_loop, daemon=True).start()
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+
 
     if not os.environ.get("RENDER"):
         def open_browser():
             time.sleep(1.5)
             webbrowser.open(f"http://127.0.0.1:{port}")
 
+
         threading.Thread(target=open_browser, daemon=True).start()
 
+
     socketio.start_background_task(background_simulation_loop)
+
+
+

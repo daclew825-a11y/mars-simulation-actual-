@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MarsNet-RL | Autonomous Orbital Routing</title>
 
+
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script type="importmap">
         {
@@ -14,6 +15,7 @@
             }
         }
     </script>
+
 
     <style>
         :root {
@@ -27,6 +29,7 @@
             --accent-glow: rgba(255, 75, 75, 0.3);
         }
 
+
         .light {
             --bg-app: #f1f5f9;
             --sidebar-bg: #ffffff;
@@ -36,12 +39,14 @@
             --border-color: #cbd5e1;
         }
 
+
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
+
 
         body {
             background-color: var(--bg-app);
@@ -51,6 +56,7 @@
             overflow: hidden;
             transition: background-color 0.3s ease, color 0.3s ease;
         }
+
 
         .sidebar {
             width: 340px;
@@ -65,11 +71,13 @@
             backdrop-filter: blur(12px);
         }
 
+
         .sidebar h2 {
             font-size: 1.2rem;
             color: var(--accent-color);
             margin-bottom: 5px;
         }
+
 
         .info-box {
             background-color: var(--card-bg);
@@ -80,16 +88,19 @@
             border: 1px solid var(--border-color);
         }
 
+
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
 
+
         label {
             font-size: 0.85rem;
             color: var(--text-main);
         }
+
 
         input[type="range"], input[type="number"], select {
             width: 100%;
@@ -99,6 +110,7 @@
             color: var(--text-main);
             border-radius: 4px;
         }
+
 
         .main-content {
             flex-grow: 1;
@@ -110,21 +122,25 @@
             background: radial-gradient(circle at 15% 0%, rgba(255,75,75,0.05), transparent 45%);
         }
 
+
         @keyframes heroIntro {
             0%   { opacity: 0; transform: translateY(-16px) scale(0.96); text-shadow: 0 0 0 transparent; }
             55%  { opacity: 1; transform: translateY(0) scale(1.015); text-shadow: 0 0 22px var(--accent-glow); }
             100% { opacity: 1; transform: translateY(0) scale(1); text-shadow: 0 0 0 transparent; }
         }
 
+
         h1.app-title {
             animation: heroIntro 1.15s cubic-bezier(0.2, 0.9, 0.3, 1) both;
         }
+
 
         .metrics-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
         }
+
 
         .metric-card, .card {
             background-color: var(--card-bg);
@@ -135,15 +151,18 @@
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
+
         .metric-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 22px -8px rgba(0, 0, 0, 0.4);
         }
 
+
         .metric-title {
             font-size: 0.8rem;
             color: var(--text-muted);
         }
+
 
         .metric-value {
             font-size: 1.5rem;
@@ -152,10 +171,12 @@
             color: var(--text-main);
         }
 
+
         .metric-sub {
             font-size: 0.75rem;
             color: var(--accent-color);
         }
+
 
         #viz-container {
             width: 100%;
@@ -170,8 +191,10 @@
             cursor: grab;
         }
 
+
         #viz-container:active { cursor: grabbing; }
         #viz-container canvas { display: block; }
+
 
         .viz-hint {
             position: absolute;
@@ -185,6 +208,7 @@
             pointer-events: none;
             z-index: 5;
         }
+
 
         .viz-legend {
             position: absolute;
@@ -202,8 +226,10 @@
             max-width: 90%;
         }
 
+
         .viz-legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
         .viz-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
 
         .inspector-panel {
             position: absolute;
@@ -221,11 +247,13 @@
             backdrop-filter: blur(6px);
         }
 
+
         .inspector-panel.visible { display: block; animation: fadeInUp 0.2s ease; }
         .inspector-panel h4 { font-size: 0.85rem; margin-bottom: 6px; color: var(--accent-color); display: flex; justify-content: space-between; align-items: center; }
         .inspector-panel .close-btn { cursor: pointer; color: var(--text-muted); font-weight: bold; }
         .inspector-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.08); }
         .inspector-row span:first-child { color: var(--text-muted); }
+
 
         .action-btn {
             background-color: var(--card-bg);
@@ -239,8 +267,10 @@
             flex: 1;
         }
 
+
         .action-btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
         .action-btn:active:not(:disabled) { transform: translateY(0); }
+
 
         .action-btn.primary {
             background-color: var(--accent-color);
@@ -249,13 +279,16 @@
             box-shadow: 0 0 14px var(--accent-glow);
         }
 
+
         .action-btn:disabled {
             opacity: 0.35;
             cursor: not-allowed;
             box-shadow: none;
         }
 
+
         .btn-row { display: flex; gap: 8px; }
+
 
         .chaos-btn {
             background-color: var(--accent-color);
@@ -268,8 +301,10 @@
             transition: opacity 0.2s, transform 0.1s;
         }
 
+
         .chaos-btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .chaos-btn:active { transform: translateY(0); }
+
 
         .status-badge {
             font-size: 0.75rem;
@@ -279,8 +314,10 @@
             display: inline-block;
         }
 
+
         .status-badge.running { background: rgba(34,197,94,0.15); color: #22c55e; }
         .status-badge.paused { background: rgba(148,163,184,0.15); color: #94a3b8; }
+
 
         .progress-track {
             width: 100%;
@@ -292,17 +329,20 @@
             margin-top: 6px;
         }
 
+
         .progress-fill {
             height: 100%;
             border-radius: 999px;
             transition: width 0.3s ease, background-color 0.3s ease;
         }
 
+
         .tabs {
             display: flex;
             border-bottom: 2px solid var(--border-color);
             margin-top: 10px;
         }
+
 
         .tab {
             padding: 10px 20px;
@@ -311,11 +351,13 @@
             transition: color 0.2s;
         }
 
+
         .tab.active {
             color: var(--accent-color);
             border-bottom: 2px solid var(--accent-color);
             font-weight: bold;
         }
+
 
         .tab-content {
             display: none;
@@ -326,9 +368,11 @@
             border-top: none;
         }
 
+
         .tab-content.active {
             display: block;
         }
+
 
         .log-feed {
             height: 220px;
@@ -340,11 +384,13 @@
             font-size: 0.8rem;
         }
 
+
         .log-line { color: var(--text-muted); }
         .log-line.evade { color: #f59e0b; }
         .log-line.collision { color: #ef4444; }
         .log-line.predicted { color: #fb923c; }
         .log-line.fuel { color: #9ca3af; }
+
 
         /* --- Briefing panel --- */
         .briefing-card {
@@ -355,6 +401,7 @@
             padding: 16px 18px;
         }
 
+
         .briefing-card h3 {
             font-size: 0.95rem;
             margin-bottom: 8px;
@@ -363,6 +410,7 @@
             gap: 8px;
         }
 
+
         .briefing-card p {
             font-size: 0.85rem;
             line-height: 1.55;
@@ -370,9 +418,11 @@
             margin-bottom: 8px;
         }
 
+
         .briefing-card p:last-child { margin-bottom: 0; }
         .briefing-card .live-line { color: var(--text-main); }
         .briefing-card .live-line b { color: var(--accent-color); }
+
 
         /* --- Instagram-style chat --- */
         .chat-panel {
@@ -380,6 +430,7 @@
             flex-direction: column;
             height: 420px;
         }
+
 
         .chat-box {
             flex: 1;
@@ -394,10 +445,12 @@
             gap: 10px;
         }
 
+
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(8px); }
             to   { opacity: 1; transform: translateY(0); }
         }
+
 
         .msg-row {
             display: flex;
@@ -407,8 +460,10 @@
             animation: fadeInUp 0.25s ease;
         }
 
+
         .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
         .msg-row.assistant { align-self: flex-start; }
+
 
         .msg-avatar {
             width: 28px;
@@ -423,10 +478,13 @@
             border: 1px solid var(--border-color);
         }
 
+
         .msg-row.user .msg-avatar { background: var(--accent-color); }
+
 
         .msg-col { display: flex; flex-direction: column; gap: 2px; }
         .msg-row.user .msg-col { align-items: flex-end; }
+
 
         .bubble {
             padding: 10px 15px;
@@ -436,11 +494,13 @@
             word-break: break-word;
         }
 
+
         .msg-row.user .bubble {
             background: linear-gradient(135deg, var(--accent-color), #b31212);
             color: white;
             border-bottom-right-radius: 6px;
         }
+
 
         .msg-row.assistant .bubble {
             background: var(--card-bg);
@@ -449,11 +509,13 @@
             border-bottom-left-radius: 6px;
         }
 
+
         .msg-time {
             font-size: 0.65rem;
             color: var(--text-muted);
             padding: 0 6px;
         }
+
 
         .chat-input-container {
             display: flex;
@@ -466,10 +528,12 @@
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
+
         .chat-input-container:focus-within {
             border-color: var(--accent-color);
             box-shadow: 0 0 0 3px var(--accent-glow);
         }
+
 
         .chat-input-container input {
             flex: 1;
@@ -480,7 +544,9 @@
             color: var(--text-main);
         }
 
+
         .chat-input-container input:focus { outline: none; }
+
 
         .btn-send-circle {
             width: 42px;
@@ -498,8 +564,10 @@
             transition: transform 0.15s;
         }
 
+
         .btn-send-circle:hover { transform: scale(1.08); }
         .btn-send-circle:active { transform: scale(0.95); }
+
 
         .theme-controls-bar {
             display: flex;
@@ -510,6 +578,7 @@
             border-radius: 6px;
             border: 1px solid var(--border-color);
         }
+
 
         /* --- Toasts --- */
         #toast-container {
@@ -522,8 +591,10 @@
             z-index: 9999;
         }
 
+
         @keyframes toastIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes toastOut { to { opacity: 0; transform: translateX(24px); } }
+
 
         .toast {
             background: var(--card-bg);
@@ -541,8 +612,10 @@
 </head>
 <body>
 
+
     <div class="sidebar">
         <h2>🚀 MarsNet-RL Control</h2>
+
 
         <div class="theme-controls-bar">
             <span style="font-size: 0.85rem;">🎨 Appearance</span>
@@ -551,6 +624,7 @@
                 <button id="theme-toggle" style="background: transparent; border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; cursor: pointer; color: var(--text-main);">🌙</button>
             </div>
         </div>
+
 
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -564,10 +638,12 @@
             </div>
         </div>
 
+
         <div class="card">
             <div class="metric-title">Cumulative RL Reward Points</div>
             <div class="metric-value" id="rl-reward-score">0.0</div>
         </div>
+
 
         <div class="card" style="display: flex; justify-content: space-between;">
             <div>
@@ -580,29 +656,36 @@
             </div>
         </div>
 
+
         <div class="control-group">
             <label for="sat-slider">Number of Satellites: <span id="sat-count-val">20</span></label>
             <input type="range" id="sat-slider" min="5" max="50" value="20">
         </div>
 
+
         <div class="info-box">Version 2.1 | Team Cassiopeia</div>
+
 
         <div class="control-group">
             <label for="debris-density-slider">Debris Density: <span id="debris-density-val">0.3</span></label>
             <input type="range" id="debris-density-slider" min="0" max="1" step="0.1" value="0.3">
         </div>
 
+
         <div class="control-group">
             <label><input type="checkbox" id="training-toggle" checked> Enable Training Mode (RL Active)</label>
             <label><input type="checkbox" id="anim-toggle" checked> ▶️ Animate Satellite Orbits</label>
         </div>
 
+
         <hr style="border-color: var(--border-color);">
+
 
         <div class="control-group">
             <label for="fuel-capacity-input">Max Delta-V Budget (m/s)</label>
             <input type="number" id="fuel-capacity-input" value="50" step="1" min="1">
         </div>
+
 
         <div class="control-group">
             <label for="orbit-select">Debris Spawn Orbit (km altitude)</label>
@@ -615,9 +698,11 @@
         </div>
     </div>
 
+
     <div class="main-content">
         <h1 class="app-title">🛰️ MarsNet-RL: Autonomous Orbital Routing</h1>
         <p style="color: var(--text-muted); font-size: 0.9rem;">Objective: Maintain &gt;90% network uptime while achieving a ≥70% collision reduction rate vs. a no-RL baseline — because a ~20-minute Earth↔Mars signal delay means ground control can't react in time.</p>
+
 
         <div class="metrics-row">
             <div class="metric-card">
@@ -636,6 +721,7 @@
                 <div class="metric-sub">Reactive avoidance rate</div>
             </div>
         </div>
+
 
         <div class="metrics-row">
             <div class="metric-card">
@@ -656,6 +742,7 @@
             </div>
         </div>
 
+
         <h3>3D Martian Orbital Visualization</h3>
         <div id="viz-container">
             <div class="viz-hint">🖱️ Drag to rotate · Scroll to zoom · Right-drag to pan · Click a satellite to inspect</div>
@@ -673,9 +760,11 @@
             </div>
         </div>
 
+
         <div>
             <button class="chaos-btn" id="btn-chaos">🚨 Inject Chaos (Space Debris)</button>
         </div>
+
 
         <div class="briefing-card">
             <h3>📖 Mission Briefing — What This Simulation Is Doing</h3>
@@ -683,11 +772,13 @@
             <p class="live-line" id="briefing-live">Press <b>Start</b> to begin the simulation.</p>
         </div>
 
+
         <div class="tabs">
             <div class="tab active" onclick="switchTab('tab1')">🚀 Live Telemetry</div>
             <div class="tab" onclick="switchTab('tab2')">🧠 RL Training Logs</div>
             <div class="tab" onclick="switchTab('tab3')">💬 MarsNet Assistant</div>
         </div>
+
 
         <div id="tab1" class="tab-content active">
             <p style="color: var(--text-muted);">Telemetry data active. All satellite systems operational.</p>
@@ -713,12 +804,15 @@
         </div>
     </div>
 
+
     <div id="toast-container"></div>
+
 
     <script>
         // Socket.IO connection lives here (classic script, runs immediately) so chat and controls
         // never depend on the Three.js visualization module (loaded from a CDN) finishing/succeeding.
         window.marsnetSocket = io();
+
 
         // --- Toast notifications ---
         function showToast(message) {
@@ -731,13 +825,16 @@
         }
         window.marsnetToast = showToast;
 
+
         // Theme and Accent Controller Logic
         const themeToggle = document.getElementById('theme-toggle');
         const accentPicker = document.getElementById('accent-picker');
         const htmlRoot = document.getElementById('html-root');
 
+
         const savedTheme = localStorage.getItem('marsnet_theme') || 'dark';
         const savedAccent = localStorage.getItem('marsnet_accent') || '#ff4b4b';
+
 
         if (savedTheme === 'light') {
             htmlRoot.classList.remove('dark');
@@ -749,8 +846,10 @@
             themeToggle.innerText = '🌙';
         }
 
+
         setAccentColor(savedAccent);
         accentPicker.value = savedAccent;
+
 
         themeToggle.addEventListener('click', () => {
             if (htmlRoot.classList.contains('dark')) {
@@ -766,14 +865,17 @@
             }
         });
 
+
         accentPicker.addEventListener('input', (e) => {
             setAccentColor(e.target.value);
             localStorage.setItem('marsnet_accent', e.target.value);
         });
 
+
         function setAccentColor(hex) {
             document.documentElement.style.setProperty('--accent-color', hex);
         }
+
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -782,6 +884,7 @@
             document.getElementById(tabId).classList.add('active');
         }
 
+
         // --- Instagram-style chat ---
         const chatBox = document.getElementById('chat-box');
         const chatInput = document.getElementById('chat-input');
@@ -789,28 +892,35 @@
         let chatHistory = [];
         let currentAssistantBubble = null;
 
+
         function timeNow() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
+
 
         function appendMessage(role, text) {
             const row = document.createElement('div');
             row.className = 'msg-row ' + role;
 
+
             const avatar = document.createElement('div');
             avatar.className = 'msg-avatar';
             avatar.textContent = role === 'user' ? '🧑‍🚀' : '🛰️';
 
+
             const col = document.createElement('div');
             col.className = 'msg-col';
+
 
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
             bubble.textContent = text;
 
+
             const time = document.createElement('div');
             time.className = 'msg-time';
             time.textContent = timeNow();
+
 
             col.appendChild(bubble);
             col.appendChild(time);
@@ -821,12 +931,15 @@
             return bubble;
         }
 
+
         function sendMessage() {
             const text = chatInput.value.trim();
             if (!text) return;
 
+
             appendMessage('user', text);
             currentAssistantBubble = appendMessage('assistant', '▌');
+
 
             try {
                 window.marsnetSocket.emit('send_message', { message: text, history: chatHistory });
@@ -838,8 +951,10 @@
             chatInput.value = '';
         }
 
+
         btnSend.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
 
         window.marsnetSocket.on('connect_error', (err) => {
             if (currentAssistantBubble) {
@@ -847,6 +962,7 @@
                 currentAssistantBubble = null;
             }
         });
+
 
         window.marsnetSocket.on('chat_response_chunk', (data) => {
             if (currentAssistantBubble) {
@@ -858,6 +974,7 @@
             }
         });
 
+
         window.marsnetSocket.on('chat_response_end', () => {
             if (currentAssistantBubble) {
                 currentAssistantBubble.textContent = currentAssistantBubble.textContent.replace("▌", "");
@@ -867,10 +984,12 @@
         });
     </script>
 
+
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
 
         // --- Constants (mirrors app.py) ---
         const R_MARS = 3389.5;
@@ -880,6 +999,7 @@
         const R_DEIMOS = 23458.0;
         const HEO_A = 16139.5, HEO_B = 10515.6, HEO_C = 12250.0;
 
+
         const STATUS_COLORS = {
             NOMINAL: 0x00ffcc,
             EVADING: 0xffb020,
@@ -887,6 +1007,7 @@
             COLLISION: 0xff3030,
             NO_FUEL: 0x808080,
         };
+
 
         const STATUS_ABBR = {
             NOMINAL: 'OK',
@@ -896,26 +1017,33 @@
             NO_FUEL: 'NO-FUEL',
         };
 
+
         // Reuse the single Socket.IO connection created in the classic script above,
         // so the 3D module and the chat panel share one connection.
         const socket = window.marsnetSocket;
         const toast = window.marsnetToast;
 
+
         socket.on('connect', () => console.log('Connected to server'));
+
 
         // --- Scene setup ---
         const container = document.getElementById('viz-container');
 
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x000000);
+
 
         const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 10, 400000);
         camera.up.set(0, 0, 1);
         camera.position.set(-10000, -68000, 16000);
 
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
         container.appendChild(renderer.domElement);
+
 
         const labelRenderer = new CSS2DRenderer();
         labelRenderer.setSize(container.clientWidth, container.clientHeight);
@@ -924,6 +1052,7 @@
         labelRenderer.domElement.style.left = '0px';
         labelRenderer.domElement.style.pointerEvents = 'none';
         container.appendChild(labelRenderer.domElement);
+
 
         // IMPORTANT: controls must attach to the WebGL canvas (renderer.domElement), not the
         // CSS2D label overlay — the label overlay has pointer-events:none and never receives
@@ -943,14 +1072,17 @@
         controls.maxDistance = 220000;
         controls.target.set(0, 0, 0);
 
+
         scene.add(new THREE.AmbientLight(0xffffff, 0.55));
         const sunLight = new THREE.PointLight(0xffffff, 1.4, 0, 0);
         sunLight.position.set(-90000, -90000, 70000);
         scene.add(sunLight);
 
+
         const grid = new THREE.PolarGridHelper(45000, 8, 8, 64, 0x223344, 0x223344);
         grid.rotation.x = Math.PI / 2;
         scene.add(grid);
+
 
         // --- Starfield backdrop ---
         (function addStarfield() {
@@ -970,12 +1102,14 @@
             scene.add(new THREE.Points(geo, mat));
         })();
 
+
         function makeLabel(text, className) {
             const div = document.createElement('div');
             div.className = className;
             div.textContent = text;
             return new CSS2DObject(div);
         }
+
 
         // --- Procedural planet textures (no external image dependency, so this never
         // breaks on a network that blocks arbitrary asset CDNs) ---
@@ -988,14 +1122,17 @@
             };
         }
 
+
         function generatePlanetTexture({ width = 1024, height = 512, base, blobColors, blobCount, poleColor, seed = 1 }) {
             const canvas = document.createElement('canvas');
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             const rand = mulberry32(seed);
 
+
             ctx.fillStyle = base;
             ctx.fillRect(0, 0, width, height);
+
 
             for (let i = 0; i < blobCount; i++) {
                 const x = rand() * width;
@@ -1020,6 +1157,7 @@
             }
             ctx.globalAlpha = 1;
 
+
             if (poleColor) {
                 const capH = height * 0.12;
                 let g = ctx.createLinearGradient(0, 0, 0, capH);
@@ -1028,6 +1166,7 @@
                 ctx.fillStyle = g;
                 ctx.fillRect(0, 0, width, capH);
 
+
                 g = ctx.createLinearGradient(0, height, 0, height - capH);
                 g.addColorStop(0, poleColor);
                 g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -1035,10 +1174,12 @@
                 ctx.fillRect(0, height - capH, width, capH);
             }
 
+
             const tex = new THREE.CanvasTexture(canvas);
             tex.colorSpace = THREE.SRGBColorSpace;
             return tex;
         }
+
 
         function generateCloudTexture(seed = 7) {
             const width = 1024, height = 512;
@@ -1060,6 +1201,7 @@
             return new THREE.CanvasTexture(canvas);
         }
 
+
         const marsTexture = generatePlanetTexture({
             base: '#a8532f',
             blobColors: ['#7c3a1e', '#c9713f', '#8a4526'],
@@ -1067,6 +1209,7 @@
             poleColor: '#f3ede6',
             seed: 42,
         });
+
 
         const earthTexture = generatePlanetTexture({
             base: '#164a7c',
@@ -1076,7 +1219,9 @@
             seed: 7,
         });
 
+
         const cloudTexture = generateCloudTexture(13);
+
 
         function makePlanet(radius, texture, x = 0, { roughness = 0.9, metalness = 0.05 } = {}) {
             const geo = new THREE.SphereGeometry(radius, 64, 48);
@@ -1086,9 +1231,11 @@
             return mesh;
         }
 
+
         const marsMesh = makePlanet(R_MARS, marsTexture, 0, { roughness: 1.0 });
         const earthMesh = makePlanet(R_EARTH, earthTexture, EARTH_OFFSET_X, { roughness: 0.8, metalness: 0.1 });
         scene.add(marsMesh, earthMesh);
+
 
         const cloudMesh = new THREE.Mesh(
             new THREE.SphereGeometry(R_EARTH * 1.02, 48, 36),
@@ -1097,19 +1244,23 @@
         cloudMesh.position.set(EARTH_OFFSET_X, 0, 0);
         scene.add(cloudMesh);
 
+
         const marsLabel = makeLabel('MARS', 'label-tag');
         marsLabel.position.set(0, 0, R_MARS + 900);
         marsLabel.element.style.color = '#ff7f50';
         marsMesh.add(marsLabel);
+
 
         const earthLabel = makeLabel('EARTH', 'label-tag');
         earthLabel.position.set(0, 0, R_EARTH + 900);
         earthLabel.element.style.color = '#5cacee';
         earthMesh.add(earthLabel);
 
+
         const phobosMesh = new THREE.Mesh(new THREE.SphereGeometry(150, 16, 12), new THREE.MeshStandardMaterial({ color: 0xc8b4a0, roughness: 1 }));
         const deimosMesh = new THREE.Mesh(new THREE.SphereGeometry(100, 16, 12), new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 1 }));
         scene.add(phobosMesh, deimosMesh);
+
 
         const phobosLabel = makeLabel('Phobos', 'label-tag');
         phobosLabel.position.set(0, 0, 300);
@@ -1117,20 +1268,24 @@
         phobosLabel.element.style.fontSize = '10px';
         phobosMesh.add(phobosLabel);
 
+
         const deimosLabel = makeLabel('Deimos', 'label-tag');
         deimosLabel.position.set(0, 0, 250);
         deimosLabel.element.style.color = '#b0b0b0';
         deimosLabel.element.style.fontSize = '10px';
         deimosMesh.add(deimosLabel);
 
+
         function makeRingGeometry(a, b = a, c = 0, segments = 128) {
             const points = [];
             for (let i = 0; i <= segments; i++) {
                 const t = (i / segments) * Math.PI * 2;
+                // Revert back to x and y coordinates so your orbitals stay flat and horizontal
                 points.push(new THREE.Vector3(a * Math.cos(t) + c, b * Math.sin(t), 0));
             }
             return new THREE.BufferGeometry().setFromPoints(points);
         }
+
 
         function addRing(geo, color, opacity, dashed = false) {
             const mat = dashed
@@ -1142,6 +1297,7 @@
             return line;
         }
 
+
         const r_lmo = R_MARS + 1000, r_mmo = R_MARS + 6000, r_aeo = R_MARS + 17032;
         addRing(makeRingGeometry(r_lmo), 0xffffff, 0.35);
         addRing(makeRingGeometry(r_mmo), 0xffffff, 0.35);
@@ -1150,10 +1306,12 @@
         addRing(makeRingGeometry(R_PHOBOS), 0xc8b4a0, 0.4, true);
         addRing(makeRingGeometry(R_DEIMOS), 0xb0b0b0, 0.4, true);
 
+
         // --- Live entities (positions are lerped toward each new server tick for a smooth glide
         // instead of a discrete 10Hz jump) ---
         const satEntries = new Map(); // id -> {mesh, div, target, initialized}
         let lastSatellites = [];
+
 
         function ensureSatEntry(id) {
             if (satEntries.has(id)) return satEntries.get(id);
@@ -1163,23 +1321,34 @@
             mesh.userData.satId = id;
             scene.add(mesh);
 
+
             const div = document.createElement('div');
             div.className = 'sat-label';
             const label = new CSS2DObject(div);
             label.position.set(0, 0, 220);
             mesh.add(label);
 
+
             const entry = { mesh, div, target: new THREE.Vector3(), initialized: false };
             satEntries.set(id, entry);
             return entry;
         }
+
 
         function updateSatellites(satellites) {
             lastSatellites = satellites;
             const seen = new Set();
             satellites.forEach(sat => {
                 const entry = ensureSatEntry(sat.id);
-                entry.target.set(sat.x, sat.y, sat.z);
+               
+                // Explicitly pull x, y, z from the backend socket payload
+                const targetX = Number(sat.x) || 0;
+                const targetY = Number(sat.y) || 0;
+                const targetZ = Number(sat.z) || 0;
+               
+                entry.target.set(targetX, targetY, targetZ);
+
+
                 if (!entry.initialized) {
                     entry.mesh.position.copy(entry.target);
                     entry.initialized = true;
@@ -1198,6 +1367,7 @@
             if (selectedSatId !== null) updateInspectorContent();
         }
 
+
         let debrisMeshes = [];
         function updateDebris(debrisList) {
             debrisMeshes.forEach(m => { scene.remove(m); m.geometry.dispose(); m.material.dispose(); });
@@ -1211,6 +1381,7 @@
             });
         }
 
+
         const MAX_PREDICTED_ZONES = 60;
         const predictedZonePool = [];
         for (let i = 0; i < MAX_PREDICTED_ZONES; i++) {
@@ -1221,6 +1392,7 @@
             scene.add(mesh);
             predictedZonePool.push(mesh);
         }
+
 
         function updatePredictedZones(zones) {
             const list = zones || [];
@@ -1233,16 +1405,19 @@
             for (let i = list.length; i < predictedZonePool.length; i++) predictedZonePool[i].visible = false;
         }
 
+
         // --- Satellite inspector (click a satellite mesh) ---
         const inspectorPanel = document.getElementById('inspector-panel');
         const inspectorTitle = document.getElementById('inspector-title');
         const inspectorBody = document.getElementById('inspector-body');
         let selectedSatId = null;
 
+
         function hideInspector() {
             selectedSatId = null;
             inspectorPanel.classList.remove('visible');
         }
+
 
         function updateInspectorContent() {
             const sat = lastSatellites.find(s => s.id === selectedSatId);
@@ -1259,14 +1434,18 @@
             inspectorPanel.classList.add('visible');
         }
 
+
         document.getElementById('inspector-close').addEventListener('click', hideInspector);
+
 
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
         let dragDistance = 0;
 
+
         renderer.domElement.addEventListener('pointerdown', () => { dragDistance = 0; });
         renderer.domElement.addEventListener('pointermove', (e) => { dragDistance += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0); });
+
 
         renderer.domElement.addEventListener('click', (event) => {
             if (dragDistance > 6) return; // ignore clicks that were actually camera drags
@@ -1282,9 +1461,11 @@
             }
         });
 
+
         // --- Moon + planet self-rotation animation (matches server's angle formulas exactly for moons) ---
         let animate = true;
         document.getElementById('anim-toggle').addEventListener('change', (e) => { animate = e.target.checked; });
+
 
         function updateMoons() {
             const elapsed = Date.now() / 1000.0;
@@ -1293,6 +1474,7 @@
             phobosMesh.position.set(R_PHOBOS * Math.cos(anglePhobos), R_PHOBOS * Math.sin(anglePhobos), 0);
             deimosMesh.position.set(R_DEIMOS * Math.cos(angleDeimos), R_DEIMOS * Math.sin(angleDeimos), 0);
         }
+
 
         function renderLoop() {
             requestAnimationFrame(renderLoop);
@@ -1311,6 +1493,7 @@
         }
         renderLoop();
 
+
         function onResize() {
             const w = container.clientWidth, h = container.clientHeight;
             if (w === 0 || h === 0) return;
@@ -1321,6 +1504,7 @@
         }
         new ResizeObserver(onResize).observe(container);
         window.addEventListener('resize', onResize);
+
 
         // --- Socket event wiring ---
         socket.on('init_state', (data) => {
@@ -1335,12 +1519,15 @@
             if (typeof data.fuel_capacity === 'number') fuelCapacityInput.value = data.fuel_capacity;
         });
 
+
         socket.on('satellites_updated', (data) => { updateSatellites(data.satellites); });
         socket.on('debris_updated', (data) => { updateDebris(data.debris); });
         socket.on('simulation_status', (data) => { setRunningState(data.running); });
 
+
         const prevStatusById = new Map();
         const briefingLine = document.getElementById('briefing-live');
+
 
         socket.on('telemetry_update', (data) => {
             setText('rl-reward-score', fmt1(data.total_reward, 0));
@@ -1352,6 +1539,7 @@
             setText('metric-success-rate', fmt1(data.success_rate, 100) + '%');
             setText('metric-fuel-remaining', fmt1(data.fleet_avg_fuel_remaining_pct, 100) + '%');
             setText('metric-predicted-conflicts', data.predicted_conflicts_count ?? 0);
+
 
             const reductionEl = document.getElementById('metric-reduction-rate');
             const reductionBar = document.getElementById('reduction-progress');
@@ -1372,14 +1560,17 @@
                 subEl.innerText = `RL: ${data.collisions} vs baseline: ${data.baseline_collisions}`;
             }
 
+
             if (data.satellites) {
                 updateSatellites(data.satellites);
                 logStatusChanges(data.satellites);
             }
             if (data.predicted_zones) updatePredictedZones(data.predicted_zones);
 
+
             updateBriefing(data, reductionText);
         });
+
 
         function updateBriefing(data, reductionText) {
             const evading = (data.satellites || []).filter(s => s.status === 'EVADING').length;
@@ -1393,15 +1584,18 @@
             briefingLine.innerHTML = parts.join(' ');
         }
 
+
         function fmt1(val, fallback) {
             const v = (val === undefined || val === null) ? fallback : val;
             return Number(v).toFixed(1);
         }
 
+
         function setText(id, text) {
             const el = document.getElementById(id);
             if (el) el.innerText = text;
         }
+
 
         // --- RL Training Log feed ---
         const logFeed = document.getElementById('training-log-feed');
@@ -1413,6 +1607,7 @@
             logFeed.prepend(line);
             while (logFeed.children.length > 60) logFeed.removeChild(logFeed.lastChild);
         }
+
 
         function logStatusChanges(satellites) {
             satellites.forEach(sat => {
@@ -1428,10 +1623,12 @@
             });
         }
 
+
         // --- Lifecycle & control wiring ---
         const statusBadge = document.getElementById('sim-status-badge');
         const btnStart = document.getElementById('btn-start');
         const btnPause = document.getElementById('btn-pause');
+
 
         function setRunningState(running) {
             statusBadge.classList.toggle('running', !!running);
@@ -1440,6 +1637,7 @@
             btnStart.disabled = !!running;
             btnPause.disabled = !running;
         }
+
 
         btnStart.addEventListener('click', () => {
             socket.emit('start_simulation');
@@ -1460,6 +1658,7 @@
             toast('Simulation reset');
         });
 
+
         const satSlider = document.getElementById('sat-slider');
         const satVal = document.getElementById('sat-count-val');
         satSlider.addEventListener('input', (e) => {
@@ -1468,6 +1667,7 @@
         });
         satSlider.addEventListener('change', () => toast(`Fleet resized to ${satSlider.value} satellites`));
 
+
         const debrisSlider = document.getElementById('debris-density-slider');
         const debrisVal = document.getElementById('debris-density-val');
         debrisSlider.addEventListener('input', (e) => {
@@ -1475,11 +1675,13 @@
             socket.emit('update_debris_density', { density: parseFloat(e.target.value) });
         });
 
+
         const trainingToggle = document.getElementById('training-toggle');
         trainingToggle.addEventListener('change', (e) => {
             socket.emit('toggle_training_mode', { enabled: e.target.checked });
             toast(e.target.checked ? 'RL training mode enabled' : 'RL training mode disabled — flying naive baseline policy');
         });
+
 
         const fuelCapacityInput = document.getElementById('fuel-capacity-input');
         fuelCapacityInput.addEventListener('change', (e) => {
@@ -1487,10 +1689,12 @@
             toast(`Delta-V budget set to ${e.target.value} m/s`);
         });
 
+
         const orbitSelect = document.getElementById('orbit-select');
         orbitSelect.addEventListener('change', (e) => {
             socket.emit('update_target_orbit', { altitude: parseFloat(e.target.value) });
         });
+
 
         document.getElementById('btn-chaos').addEventListener('click', () => {
             socket.emit('inject_chaos');
@@ -1499,3 +1703,6 @@
     </script>
 </body>
 </html>
+
+
+
