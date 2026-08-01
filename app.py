@@ -718,4 +718,4 @@ if __name__ == "__main__":
 
         threading.Thread(target=open_browser, daemon=True).start()
 
-    socketio.run(app, debug=False, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
+    socketio.start_background_task(background_simulation_loop)
